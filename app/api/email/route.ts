@@ -15,11 +15,11 @@ const transporter = nodemailer.createTransport({
   secure: process.env.SMTP_SECURE === 'true',
   auth: process.env.SMTP_USER
     ? {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      }
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    }
     : undefined,
-    tls: { rejectUnauthorized: false }
+  tls: { rejectUnauthorized: false }
 });
 
 async function sendEmail({ to, subject, html, text }: SendEmailInput) {
@@ -35,19 +35,38 @@ async function sendEmail({ to, subject, html, text }: SendEmailInput) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { to, subject, html, text } = body || {};
+    const hasValidShape =
+      body &&
+      typeof body === 'object' &&
+      typeof (body as { to?: unknown }).to === 'string' &&
+      typeof (body as { subject?: unknown }).subject === 'string' &&
+      (typeof (body as { html?: unknown }).html === 'string' ||
+        typeof (body as { text?: unknown }).text === 'string');
+
+    if (!hasValidShape) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid payload' },
+        { status: 400 }
+      );
+    }
+
+    const { to, subject, html, text } = body as SendEmailInput;
+    //const { to, subject, html, text } = body || {};
     if (!to || !subject || (!html && !text)) {
       return NextResponse.json(
         { success: false, error: 'Invalid payload' },
         { status: 400 }
       );
     }
-    await sendEmail({ to, subject, html, text });
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json(
-      { success: false, error: e.message },
-      { status: 500 }
-    );
+    const info = await sendEmail({ to, subject, html, text });
+    return NextResponse.json({ success: true, messageId: info.messageId });
+    //return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err: unknown) {
+    // return NextResponse.json(
+    //   { success: false, error: e.message },
+    //   { status: 500 }
+    // );
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
