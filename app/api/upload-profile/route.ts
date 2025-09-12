@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
     const publicUrl = `/profiles/${id}.${safeExt}`;
     return NextResponse.json({ success: true, url: publicUrl });
   } catch (e: unknown) {
-    console.error('Upload profile error:', e);
-    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('Upload profile error:', message);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
