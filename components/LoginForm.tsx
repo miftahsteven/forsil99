@@ -32,8 +32,9 @@ const LoginForm: React.FC = () => {
             }
             // Redirect
             r.push('/home');
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message);
         } finally {
             setLoading(false);
         }
