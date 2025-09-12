@@ -103,6 +103,13 @@ export async function addAlumniWithPhoto(
   return newRef.key;
 }
 
+// tambah update user jika user sudah ada
+export async function updateAlumni(id: string, data: Partial<Omit<Alumni, 'id' | 'createdAt'>>) {
+  const alumniRef = ref(db, `alumni/${id}`);
+  await update(alumniRef, data);
+  return id;
+}
+
 export async function addAuthLogin(data: { username: string; password?: string; role?: string; }) {
   const authRef = ref(db, 'auth');
   //create password random 6 digit

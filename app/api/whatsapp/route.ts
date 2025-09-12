@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-
 // /Users/miftahsyarief/MyLab/forsil99web/app/api/whatsapp/route.ts
 
 // Pastikan env sudah diset:
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
 
         const token = process.env.WABLAS_TOKEN;
         const secretKey = process.env.WABLAS_SECRET_KEY;
-        const wablasUrl = process.env.WABLAS_URL || "https://wablas.com/api/";
+        const wablasUrl = process.env.WABLAS_URL || "https://sby.wablas.com/api/";
 
         if (!token || !secretKey) {
             return NextResponse.json(

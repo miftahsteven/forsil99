@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { addAlumni, addAuthLogin, addAlumniWithPhoto } from '../lib/alumni';
+import { addAlumni, addAuthLogin, addAlumniWithPhoto, updateAlumni } from '../lib/alumni';
 
 interface Props {
   onSuccess?: () => void;
@@ -33,22 +33,36 @@ export default function AlumniForm({ onSuccess }: Props) {
     setLoading(true);
 
     try {
-      //const id = await addAlumni(form);
-      // jika ada file foto, upload
-      const id = photoFile ? await addAlumniWithPhoto(form, photoFile) : await addAlumni(form);
-      // if(photoFile) {
-      //   await addAlumniWithPhoto(form, photoFile);
-      // }else {
-      //   await addAlumni(form);
-      // }
-
-      if (id) {
-        await addAuthLogin({ username: form.email, role: 'alumni' });
-        setMsg("Registrasi berhasil. Cek email untuk informasi login.");
-        setForm({ name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '' });
+      // sebelum addDataAlumni, cek terlebih dahulu apakah email sudah ada
+      const email = form.email.trim().toLowerCase();
+      //find email di firebase (alumni) berdasarkan form.email
+      //jika ada, maka update data alumni
+      //jika tidak ada, maka add data alumni baru
+      //untuk update gunakan updateAlumni dari lib/alumni.ts
+      //untuk find email gunakan query firebase
+      //jika ada, maka ambil idnya
+      //jika tidak ada, maka idnya null
+      let id: string | null = null;
+      const alumniList = await fetch('/api/alumni?email=' + encodeURIComponent(email));
+      const alumniData = await alumniList.json();
+      if (alumniData && Array.isArray(alumniData) && alumniData.length > 0) {
+        //ada data alumni dengan email tersebut, maka update
+        id = alumniData[0].id;
+        await updateAlumni(id as string, { ...form, email });
+        setMsg("Data alumni berhasil diupdate.");
         onSuccess?.();
+
       } else {
-        setMsg("Gagal menyimpan data alumni.");
+
+        const id = photoFile ? await addAlumniWithPhoto(form, photoFile) : await addAlumni(form);
+        if (id) {
+          await addAuthLogin({ username: form.email, role: 'alumni' });
+          setMsg("Registrasi berhasil. Cek email untuk informasi login.");
+          setForm({ name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '' });
+          onSuccess?.();
+        } else {
+          setMsg("Gagal menyimpan data alumni.");
+        }
       }
     } catch (e: unknown) {
       //setMsg("Gagal menyimpan: " + e.message);
