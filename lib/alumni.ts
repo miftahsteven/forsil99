@@ -16,6 +16,42 @@ export interface Alumni {
   createdAt?: number;
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+function isString(v: unknown): v is string {
+  return typeof v === 'string';
+}
+function isNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+function coerceAlumni(id: string, v: unknown): Alumni | null {
+  if (!isRecord(v)) return null;
+  const name = isString(v.name) ? v.name : '';
+  const email = isString(v.email) ? v.email : '';
+  const program = isString(v.program) ? v.program : '';
+  const graduationYear = isNumber(v.graduationYear)
+    ? v.graduationYear
+    : Number(v.graduationYear ?? 0);
+  const nohp = isString(v.nohp) ? v.nohp : '';
+  const tanggalLahir = isString(v.tanggalLahir) ? v.tanggalLahir : '';
+  const pekerjaan = isString(v.pekerjaan) ? v.pekerjaan : '';
+  const createdAt = isNumber(v.createdAt) ? v.createdAt : undefined;
+
+  return {
+    id,
+    name,
+    email,
+    program,
+    graduationYear,
+    nohp,
+    tanggalLahir,
+    pekerjaan,
+    createdAt,
+  };
+}
+
 export async function addAlumni(data: Omit<Alumni, 'id' | 'createdAt'>) {
   const alumniRef = ref(db, 'alumni');
   const newRef = await push(alumniRef, {
@@ -58,8 +94,9 @@ export async function addAlumniWithPhoto(
       } else {
         console.warn('Upload profile failed:', json.error);
       }
-    } catch (e: any) {
-      console.warn('Upload profile error:', e.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, error: message };
     }
   }
 
@@ -101,17 +138,25 @@ export async function addAuthLogin(data: { username: string; password?: string; 
 
       })
     });
-  } catch (e) {
-    console.warn('Send email failed', (e as any).message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.warn('Send email failed', message);
   }
 
   return newRef.key;
 }
 
 export function mapSnapshot(snapshot: DataSnapshot): Alumni[] {
-  const val = snapshot.val();
-  if (!val) return [];
-  return Object.entries<any>(val)
-    .map(([key, v]) => ({ id: key, ...v }))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const valUnknown = snapshot.val() as unknown;
+  if (!isRecord(valUnknown)) return [];
+
+  const entries = Object.entries(valUnknown as Record<string, unknown>);
+  const list = entries
+    .map(([key, value]) => coerceAlumni(key, value))
+    .filter((x): x is Alumni => x !== null)
+    .sort(
+      (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)
+    );
+
+  return list;
 }
