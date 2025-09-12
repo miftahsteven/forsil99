@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     // Ekstensi sederhana
     const original = (file as File).name || 'photo';
     const ext = original.includes('.') ? original.split('.').pop() : 'jpg';
-    const safeExt = (ext || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+    const safeExt = (ext || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
 
     const dir = path.join(process.cwd(), 'public', 'profiles');
     await fs.mkdir(dir, { recursive: true });
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const publicUrl = `/profiles/${id}.${safeExt}`;
     return NextResponse.json({ success: true, url: publicUrl });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Upload profile error:', e);
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
