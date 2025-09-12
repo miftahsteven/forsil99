@@ -13,45 +13,35 @@ const LoginForm: React.FC = () => {
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+    const r = useRouter();
 
-    const fakeLocalAuth = async (u: string, p: string): Promise<LoginResponse> => {
-        // Ganti dengan request ke backend /api/login jika sudah tersedia.
-        await new Promise(r => setTimeout(r, 600))
-        if (u === 'admin' && p === 'admin123') return { success: true }
-        return { success: false, message: 'Username atau password salah.' }
-    }
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setError(null)
-        if (!username || !password) {
-            setError('Isi username dan password.')
-            return
-        }
-        setLoading(true)
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
         try {
-            // Contoh jika sudah ada API:
-            // const res = await fetch('/api/login', {
-            //   method: 'POST',
-            //   headers: { 'Content-Type': 'application/json' },
-            //   body: JSON.stringify({ username, password })
-            // })
-            // const data: LoginResponse = await res.json()
-            // if (!data.success) throw new Error(data.message || 'Login gagal')
-
-            const data = await fakeLocalAuth(username, password)
-            if (!data.success) throw new Error(data.message || 'Login gagal')
-            router.push('/') // Halaman menu utama
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                setError(json.error || 'Login gagal');
+                return;
+            }
+            // Redirect
+            r.push('/home');
         } catch (err: any) {
-            setError(err.message || 'Terjadi kesalahan.')
+            setError(err.message);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     return (
         <div style={styles.container}>
-            <form onSubmit={handleSubmit} style={styles.card} aria-label="Form Login">
+            <form onSubmit={submit} style={styles.card} aria-label="Form Login">
                 <h2 style={styles.title}>Login</h2>
                 <label style={styles.label}>
                     Username
@@ -79,13 +69,13 @@ const LoginForm: React.FC = () => {
                 </label>
                 {error && <div style={styles.error} role="alert">{error}</div>}
                 <button
-                        type="submit"
-                        style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
-                        disabled={loading}
+                    type="submit"
+                    style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
+                    disabled={loading}
                 >
                     {loading ? 'Memproses...' : 'Masuk'}
                 </button>
-                <p style={styles.hint}>Gunakan admin / admin123 (sementara).</p>
+                <p style={styles.hint}>Gunakan password yang dikirim whatsapp server.</p>
             </form>
         </div>
     )
@@ -93,9 +83,9 @@ const LoginForm: React.FC = () => {
 
 const styles: { [k: string]: React.CSSProperties } = {
     container: {
-        minHeight: '100dvh',
+        minHeight: '50dvh',
         display: 'flex',
-        alignItems: 'center',
+        //alignItems: 'center',
         justifyContent: 'center',
         background: '#f5f7fb',
         padding: 24

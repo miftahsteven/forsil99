@@ -1,5 +1,7 @@
 import './globals.css';
 import React from 'react';
+import { redirect } from 'next/navigation';
+
 
 export const metadata = {
   title: 'Data FORSIL99 - Registrasi Alumni',

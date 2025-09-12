@@ -1,14 +1,19 @@
-import Link from 'next/link';
+import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
 
-export default function Home() {
-  return (
-    <div className="space-y-4">      
-      <p>Pilih menu:</p>
-      <ul className="list-disc pl-5">
-        <li><Link className="text-blue-600" href="/register">Profil Alumni</Link></li>
-        <li><Link className="text-blue-600" href="/alumni">Daftar Alumni Terdaftar</Link></li>
-        <li><Link className="text-blue-600" href="/login">Daftar UKM Alumni</Link></li>
-      </ul>
-    </div>
-  );
+// /app/auth/login.tsx
+
+// Lazy load (optional; remove dynamic if not needed)
+const Login = dynamic(() => import('../components/LoginForm'), { ssr: true });
+
+export const metadata: Metadata = {
+    title: 'Login',
+};
+
+export default function LoginPage() {
+    return (
+        <main className="min-h-screen items-center justify-center p-0">
+            <Login />
+        </main>
+    );
 }

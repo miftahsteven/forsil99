@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "blueimp-md5": "^2.19.0",
     "firebase": "^12.2.1",
     "next": "15.5.2",
     "nodemailer": "^7.0.6",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/blueimp-md5": "^2.18.2",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.1",
     "@types/react": "^19",
