@@ -51,7 +51,9 @@ export default function AlumniForm({ onSuccess }: Props) {
         setMsg("Gagal menyimpan data alumni.");
       }
     } catch (e: unknown) {
-      setMsg("Gagal menyimpan: " + e.message);
+      //setMsg("Gagal menyimpan: " + e.message);
+      const message = e instanceof Error ? e.message : String(e);
+      setMsg("Gagal menyimpan: " + message);
     } finally {
       setLoading(false);
     }
