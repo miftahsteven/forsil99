@@ -13,7 +13,7 @@ const years = Array.from({ length: 3 }, (_, i) => 2000 - i);
 const jurusan = ['IPA', 'IPS', 'Bahasa'];
 
 export default function AlumniForm({ onSuccess }: Props) {
-  const [form, setForm] = useState({ name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp:'', tanggalLahir: '', pekerjaan: '', photoprofile: '' });
+  const [form, setForm] = useState({ name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '' });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -31,7 +31,7 @@ export default function AlumniForm({ onSuccess }: Props) {
       return;
     }
     setLoading(true);
-    
+
     try {
       //const id = await addAlumni(form);
       // jika ada file foto, upload
@@ -42,7 +42,7 @@ export default function AlumniForm({ onSuccess }: Props) {
       //   await addAlumni(form);
       // }
 
-      if(id) {
+      if (id) {
         await addAuthLogin({ username: form.email, role: 'alumni' });
         setMsg("Registrasi berhasil. Cek email untuk informasi login.");
         setForm({ name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '' });
@@ -50,11 +50,11 @@ export default function AlumniForm({ onSuccess }: Props) {
       } else {
         setMsg("Gagal menyimpan data alumni.");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setMsg("Gagal menyimpan: " + e.message);
     } finally {
       setLoading(false);
-    } 
+    }
   };
 
   return (
@@ -94,20 +94,20 @@ export default function AlumniForm({ onSuccess }: Props) {
       {/** tambah pekerjaan */}
       <div>
         <label className='block text-sm font-medium'>Pekerjaan</label>
-        <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" />         
-      </div>      
+        <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" />
+      </div>
       {/** tambahkan upload gambar (jpg, png) untuk profil picture. Upload ke area asset/image */}
       <div>
         <label className='block text-sm font-medium'>Foto Profil</label>
         <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              setPhotoFile(f || null);
-            }}
-            className="border p-2 w-full rounded"
-          />
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setPhotoFile(f || null);
+          }}
+          className="border p-2 w-full rounded"
+        />
         {photoFile && <img src={URL.createObjectURL(photoFile)} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded-full" />}
       </div>
       {/** tombol submit dan batal */}
