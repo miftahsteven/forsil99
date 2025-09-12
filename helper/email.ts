@@ -1,155 +1,125 @@
 import 'server-only';
-import nodemailer, { Transporter } from 'nodemailer';
-import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+import nodemailer, { type SentMessageInfo } from 'nodemailer';
 
-// helper/email.ts
+// Opsional: pakai Resend via HTTP (bukan SMTP)
+let ResendClass: { new(apiKey: string): { emails: { send: (args: ResendSendArgs) => Promise<ResendSendResp> } } } | null = null;
+try {
+    // Hindari error bundling jika package belum di-install
+    // npm i resend
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    ResendClass = require('resend').Resend as typeof ResendClass;
+} catch {
+    ResendClass = null;
+}
 
-let transporter: Transporter | null = null;
+export type EmailProvider = 'smtp' | 'resend';
 
-export interface SendEmailParams {
+export interface SendEmailInput {
     to: string | string[];
     subject: string;
-    html?: string;        // HTML body (can include inline CSS / <script> though most clients block scripts)
-    text?: string;        // Plain text fallback (auto-generated if absent)
-    cc?: string | string[];
-    bcc?: string | string[];
-    replyTo?: string;
-    attachments?: Array<{
-        filename?: string;
-        content?: string | Buffer;
-        path?: string;
-        contentType?: string;
-        cid?: string;
-    }>;
-    headers?: Record<string, string>;
+    html?: string;
+    text?: string;
+    from?: string; // override EMAIL_FROM bila perlu
 }
 
 export interface SendEmailResult {
-    messageId: string;
-    accepted: Array<string | number>;
-    rejected: Array<string | number>;
-    pending: Array<string | number>;
-    response: string;
-    previewUrl?: string;
+    success: boolean;
+    provider: EmailProvider;
+    messageId?: string;
+    error?: string;
 }
 
-function getTransporter(): Transporter {
-    if (transporter) return transporter;
+// Tipe minimal respon Resend (menghindari any)
+type ResendSendArgs = {
+    from: string;
+    to: string | string[];
+    subject: string;
+    html?: string;
+    text?: string;
+};
 
-    const {
-        EMAIL_HOST,
-        EMAIL_PORT,
-        EMAIL_USER,
-        EMAIL_PASS,
-        EMAIL_SECURE,
-        EMAIL_POOL,
-    } = process.env;
+type ResendSendResp =
+    | { data: { id: string }; error: null }
+    | { data: null; error: { message: string; name?: string } };
 
-    if (!EMAIL_HOST || !EMAIL_PORT) {
-        throw new Error('Email transport variables (EMAIL_HOST, EMAIL_PORT) are required');
+function getProvider(): EmailProvider {
+    const p = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase();
+    return p === 'resend' ? 'resend' : 'smtp';
+}
+
+function createSMTPTransport() {
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT || 587);
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!host) throw new Error('SMTP_HOST is not set');
+
+    const transport = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: user && pass ? { user, pass } : undefined,
+    });
+
+    return transport;
+}
+
+async function sendViaSMTP(input: SendEmailInput): Promise<SendEmailResult> {
+    const transporter = createSMTPTransport();
+    const info: SentMessageInfo = await transporter.sendMail({
+        from: input.from || process.env.EMAIL_FROM || 'No Reply <no-reply@example.com>',
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+    });
+    return { success: true, provider: 'smtp', messageId: info.messageId };
+}
+
+async function sendViaResend(input: SendEmailInput): Promise<SendEmailResult> {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+        return { success: false, provider: 'resend', error: 'RESEND_API_KEY is not set' };
+    }
+    if (!ResendClass) {
+        return { success: false, provider: 'resend', error: 'resend package is not installed' };
     }
 
-    transporter = nodemailer.createTransport({
-        host: EMAIL_HOST,
-        port: Number(EMAIL_PORT),
-        secure: EMAIL_SECURE === 'true' || Number(EMAIL_PORT) === 465,
-        auth: EMAIL_USER && EMAIL_PASS ? { user: EMAIL_USER, pass: EMAIL_PASS } : undefined,
-        pool: EMAIL_POOL === 'true',
-    } as SMTPTransport.Options);
-
-    // Optional verify in development
-    if (process.env.NODE_ENV !== 'production') {
-        transporter.verify().catch(err => {
-            console.warn('[email] transporter verify failed:', err.message);
-        });
-    }
-
-    return transporter;
-}
-
-function stripHtml(html: string): string {
-    return html
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<\/(div|p|br|li|tr)>/gi, '\n')
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-}
-
-export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-    const {
-        to,
-        subject,
-        html,
-        text,
-        cc,
-        bcc,
-        replyTo,
-        attachments,
-        headers,
-    } = params;
-
-    if (!to) throw new Error('"to" is required');
-    if (!subject) throw new Error('"subject" is required');
-    if (!html && !text) throw new Error('Either "html" or "text" must be provided');
-
-    const from =
-        process.env.EMAIL_FROM ||
-        (process.env.EMAIL_USER ? `No Reply <${process.env.EMAIL_USER}>` : undefined);
-
+    const resend = new ResendClass(apiKey);
+    const from = input.from || process.env.EMAIL_FROM;
     if (!from) {
-        throw new Error('EMAIL_FROM or EMAIL_USER must be set for the "from" address');
+        return { success: false, provider: 'resend', error: 'EMAIL_FROM is not set' };
     }
 
-    const mailOptions = {
+    const resp = await resend.emails.send({
         from,
-        to,
-        subject,
-        html,
-        text: text || (html ? stripHtml(html) : undefined),
-        cc,
-        bcc,
-        replyTo,
-        attachments,
-        headers,
-    };
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+    });
 
-    const info = await getTransporter().sendMail(mailOptions);
-
-    let previewUrl: string | undefined;
-    // Ethereal test account support
-    try {
-        const getTestMessageUrl = (nodemailer as any).getTestMessageUrl;
-        if (getTestMessageUrl) {
-            previewUrl = getTestMessageUrl(info) || undefined;
-        }
-    } catch {
-        // ignore
+    if ('error' in resp && resp.error) {
+        return { success: false, provider: 'resend', error: resp.error.message };
     }
-
-    return {
-        messageId: info.messageId,
-        accepted: info.accepted as any,
-        rejected: info.rejected as any,
-        pending: (info as any).pending || [],
-        response: info.response,
-        previewUrl,
-    };
+    return { success: true, provider: 'resend', messageId: resp.data.id };
 }
 
-/**
- * Example usage:
- *
- * await sendEmail({
- *   to: 'user@example.com',
- *   subject: 'Welcome',
- *   html: '<h1>Hello</h1><p>Welcome!</p>'
- * });
- */
+export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+    try {
+        if (!input.to || !input.subject || (!input.html && !input.text)) {
+            return { success: false, provider: getProvider(), error: 'Invalid payload' };
+        }
+
+        const provider = getProvider();
+        if (provider === 'resend') {
+            return await sendViaResend(input);
+        }
+        return await sendViaSMTP(input);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { success: false, provider: getProvider(), error: message };
+    }
+}
