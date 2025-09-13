@@ -1,196 +1,174 @@
-import { NextRequest, NextResponse } from 'next/server';
-import admin from 'firebase-admin';
-//import bcrypt from 'bcryptjs';
-import md5 from 'blueimp-md5';
+import { NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 
-// /app/api/webhooks/route.ts
+// app/api/webhooks/route.ts
 
-type WebhookBody = {
-    // Wablas can send various shapes; we handle common ones defensively
-    message?: string;
-    text?: string;
-    content?: string;
-    from?: string;
-    sender?: string;
-    phone?: string;
-    number?: string;
-    messages?: Array<{ text?: string; from?: string; sender?: string; phone?: string; number?: string }>;
-    data?: unknown;
-};
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-type WablasPayload = {
-    phone: string;
-    message: string;
-    priority?: boolean;
-    device_id?: string;
-};
+// Expected env vars:
+// - WABLAS_API_URL (e.g. https://[your-domain].wablas.com/api/send-message)
+// - WABLAS_TOKEN   (API token from Wablas; usually sent as plain value in "Authorization" header)
+// - FIREBASE_DATABASE_URL (e.g. https://your-project-id.firebaseio.com)
+// - FIREBASE_DATABASE_SECRET (optional database secret or auth token for REST write)
 
-function initFirebase() {
-    if (admin.apps.length) return admin.app();
+//type AnyJson = Record<string, any>;
+function isObject(v: unknown): v is Record<string, unknown> {
+    return typeof v === 'object' && v !== null;
+}
+function getStr(o: unknown, key: string): string | undefined {
+    if (!isObject(o)) return undefined;
+    const v = o[key];
+    return typeof v === 'string' ? v : undefined;
+}
 
-    const svc = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!svc) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT is not set. Provide the service account JSON string in env.');
+function extractMessage(body: unknown): string | undefined {
+    const direct = getStr(body, 'message') || getStr(body, 'text') || getStr(body, 'body');
+    if (direct) return direct;
+    // nested: body.message.text
+    if (isObject(body) && isObject(body.message)) {
+        const mt = getStr(body.message, 'text');
+        if (mt) return mt;
     }
-    const parsed = JSON.parse(svc);
-    admin.initializeApp({
-        credential: admin.credential.cert(parsed),
-    });
-    return admin.app();
+    // array: body.messages[0].text|message
+    if (isObject(body)) {
+        const messages = body['messages'];
+        if (Array.isArray(messages) && messages.length) {
+            const first = messages[0];
+            return getStr(first, 'text') || getStr(first, 'message');
+        }
+    }
+    return undefined;
 }
 
-function getDb() {
-    return initFirebase().firestore();
+function extractSenderPhone(body: unknown): string | undefined {
+    const direct =
+        getStr(body, 'phone') ||
+        getStr(body, 'sender') ||
+        getStr(body, 'from') ||
+        getStr(body, 'wa_number');
+    if (direct) return direct;
+    if (isObject(body)) {
+        const messages = body['messages'];
+        if (Array.isArray(messages) && messages.length) {
+            return getStr(messages[0], 'from');
+        }
+    }
+    return undefined;
 }
 
-function normalizePhone(input?: string): string | null {
-    if (!input) return null;
-    // Keep digits only
-    let digits = (input.match(/\d+/g) || []).join('');
-    if (!digits) return null;
-
-    // Normalize to 62XXXXXXXXXXX (Indonesia)
-    if (digits.startsWith('0')) digits = `62${digits.slice(1)}`;
-    if (digits.startsWith('620')) digits = `62${digits.slice(2)}`;
-    if (digits.startsWith('8')) digits = `62${digits}`;
-    if (digits.startsWith('62')) return digits;
-
-    // Fallback: return as-is digits
-    return digits;
-}
-
-function extractTextAndPhone(body: WebhookBody): { text: string; phone: string | null } {
-    const text =
-        body?.message ??
-        body?.text ??
-        body?.content ??
-        body?.messages?.[0]?.text ??
-        '';
-
-    const phone =
-        normalizePhone(
-            body?.phone ??
-            body?.number ??
-            body?.sender ??
-            body?.from ??
-            body?.messages?.[0]?.phone ??
-            body?.messages?.[0]?.number ??
-            body?.messages?.[0]?.sender ??
-            body?.messages?.[0]?.from
-        ) || null;
-
-    return { text: (text || '').toString(), phone };
-}
-
-function generatePassword(len = 10) {
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+function genRandomPasswordPlain(len = 7): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let out = '';
     for (let i = 0; i < len; i++) {
-        out += alphabet[Math.floor(Math.random() * alphabet.length)];
+        out += chars[Math.floor(Math.random() * chars.length)];
     }
     return out;
 }
 
-async function sendWablasMessage(phone: string, message: string) {
+function md5(input: string): string {
+    return createHash('md5').update(input).digest('hex');
+}
+
+async function sendWhatsappReplyWablas(phone: string, message: string) {
+    //const apiUrl = process.env.WABLAS_API_URL;
     const token = process.env.WABLAS_TOKEN;
-    const secretKey = process.env.WABLAS_SECRET_KEY;
-    if (!token || !secretKey) {
-        throw new Error('WABLAS_TOKEN or WABLAS_SECRET_KEY is not set');
+    const secret = process.env.WABLAS_SECRET_KEY;
+
+    if (!token) {
+        console.warn('WABLAS_API_URL or WABLAS_TOKEN not set. Skipping WA reply.');
+        return;
     }
-    const baseUrl =
-        process.env.WABLAS_BASE_URL || 'https://sby.wablas.com/api/send-message';
-    const deviceId = process.env.WABLAS_DEVICE_ID;
 
-    if (!token) throw new Error('WABLAS_TOKEN is not set');
+    const apiUrl = "https://sby.wablas.com/api/send-message"; // Example endpoint
 
-    const payload: WablasPayload = {
-        phone,
-        message,
-        priority: true,
-    };
-    if (deviceId) payload.device_id = deviceId;
-
-    const res = await fetch(baseUrl, {
+    const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            //Authorization: `Bearer ${token}`,
-            Authorization: `${token}.${secretKey}`,
-            Accept: "application/json",
+            // Wablas usually expects raw token (no "Bearer ")
+            //'Authorization': token,
+            'Authorization': `${token}.${secret}`,
+            'Accept': 'application/json',
         },
+        body: JSON.stringify({ phone, message }),
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('Failed to send WA via Wablas:', res.status, text);
+    }
+}
+
+async function writeToRealtimeDatabase(payload: Record<string, unknown>) {
+    const baseUrl = process.env.FIREBASE_DB_URL;
+    //const secret = process.env.FIREBASE_DATABASE_SECRET;
+
+    if (!baseUrl) {
+        console.warn('FIREBASE_DATABASE_URL not set. Skipping DB write.');
+        return;
+    }
+
+    //const url = `${baseUrl.replace(/\/$/, '')}/alumni/auth.json${secret ? `?auth=${encodeURIComponent(secret)}` : ''}`;
+    const url = `${baseUrl.replace(/\/$/, '')}/auth.json`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
         const text = await res.text().catch(() => '');
-        throw new Error(`Wablas send failed: ${res.status} ${res.statusText} ${text}`);
+        console.error('Failed to write to Realtime Database:', res.status, text);
     }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
-        const body = (await req.json().catch(() => ({}))) as WebhookBody;
-        const { text, phone } = extractTextAndPhone(body);
+        const body: unknown = await req.json();
 
-        if (!phone) {
-            return NextResponse.json({ ok: true, skipped: true, reason: 'no-phone' });
+        // Log the entire payload and the message specifically
+        console.log('Incoming webhook body:', body);
+        const msg = extractMessage(body);
+        console.log('Incoming message text:', msg);
+
+        const senderPhone = extractSenderPhone(body);
+
+        if (!msg || !senderPhone) {
+            return NextResponse.json({ ok: true, info: 'Missing message or sender phone' }, { status: 200 });
         }
 
-        const lower = text.trim().toLowerCase();
+        if (msg.toLowerCase().includes('daftar')) {
+            const username = String(senderPhone).trim();
+            const plain = genRandomPasswordPlain(7);
+            const hashed = md5(plain);
 
-        // Only act when user sends "daftar"
-        if (!lower.includes('daftar')) {
-            return NextResponse.json({ ok: true, skipped: true });
-        }
-
-        const db = getDb();
-        // Store in alumni/auth with phone as doc id
-        const docRef = db.collection('alumni').doc('auth').collection('users').doc(phone);
-        const snap = await docRef.get();
-
-        const username = phone; // Use phone number as username
-        const loginUrl = process.env.LOGIN_URL || 'https://example.com/login';
-
-        if (snap.exists) {
-            // Already registered: do not send password again
-            const message =
-                `Akun sudah terdaftar.\n` +
+            const replyMessage =
+                `Akun pendaftaran:\n` +
                 `Username: ${username}\n` +
-                `Silakan login di ${loginUrl}. Jika lupa password, gunakan fitur "Lupa Password".`;
-            await sendWablasMessage(phone, message);
-            return NextResponse.json({ ok: true, status: 'already-registered' });
+                `Password: ${hashed}`;
+
+            // Send WhatsApp reply
+            await sendWhatsappReplyWablas(username, replyMessage);
+
+            // Save to Firebase Realtime Database (username + md5 password)
+            await writeToRealtimeDatabase({
+                username,
+                password: hashed,
+                createdAt: Date.now(),
+            });
         }
 
-        // Create new credentials
-        const plainPassword = generatePassword(10);
-        //const passwordHash = await bcrypt.hash(plainPassword, 10);
-        const passwordHash = md5(plainPassword);
-
-        await docRef.set({
-            username,
-            passwordHash,
-            phone,
-            status: 'REGISTERED',
-            mustCompleteProfile: true,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        const reply =
-            `Pendaftaran berhasil.\n` +
-            `Username: ${username}\n` +
-            `Password: ${plainPassword}\n` +
-            `Silakan login di ${loginUrl} untuk melengkapi data.`;
-
-        await sendWablasMessage(phone, reply);
-
-        return NextResponse.json({ ok: true, status: 'registered' });
+        return NextResponse.json({ ok: true }, { status: 200 });
     } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        // Avoid leaking secrets in responses
-        console.error('webhook-error', message);
-        return NextResponse.json({ ok: false, error: 'internal-error' }, { status: 500 });
+        //console.error('Webhook error:', err?.message || err);
+        //return NextResponse.json({ ok: false, error: 'internal_error' }, { status: 200 });
+        const message =
+            err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+                ? err.message
+                : String(err);
+        console.error('Webhook error:', message);
+        return NextResponse.json({ ok: false, error: message }, { status: 200 });
     }
 }
-
-export const dynamic = 'force-dynamic';
