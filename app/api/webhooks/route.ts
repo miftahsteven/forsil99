@@ -110,6 +110,14 @@ function normalizePhone(raw: string): string {
     return d;
 }
 
+function generateUsernameFromPhone(phone: string): string {
+    //username tidak menggunakan 62 jika nomor 628xxxxxx maka username adalah 08xxxxxx
+    if (phone.startsWith('62')) {
+        return '0' + phone.slice(2);
+    }
+    return phone;
+}
+
 async function sendWhatsappReplyWablas(phone: string, message: string) {
     const token = process.env.WABLAS_TOKEN;
     const secret = process.env.WABLAS_SECRET_KEY; // opsional, jika dibutuhkan header terpisah
@@ -223,10 +231,10 @@ export async function POST(req: Request) {
             const hashed = md5(plain);
             const password = `${plain}`;
             //username yang dikirim dan disimpan ke firebase sebagai username tidak menggunakan 62, namun untuk mengirim pesan WA tetap menggunakan 62           
-            const phone = username.startsWith('62') ? username : (username.startsWith('0') ? '62' + username.slice(1) : '62' + username);
+            const usernameFinal = generateUsernameFromPhone(username);
             const replyMessage =
                 `Akun pendaftaran:\n` +
-                `Username: ${phone}\n` +
+                `Username: ${usernameFinal}\n` +
                 `Password: ${password}`
                 + `\n\nSilakan login di https://forsil99.id/ dengan username & password tersebut.`;
 
