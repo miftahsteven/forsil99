@@ -83,8 +83,8 @@ function normalizePhone(raw: string): string {
 async function sendWhatsappReplyWablas(phone: string, message: string) {
     const token = process.env.WABLAS_TOKEN;
     const secret = process.env.WABLAS_SECRET_KEY; // opsional, jika dibutuhkan header terpisah
-    const base = (process.env.WABLAS_URL || 'https://sby.wablas.com/api/').replace(/\/+$/, '');
-    const apiUrl = `${base}/send-message`;
+    const base = process.env.WABLAS_URL;
+    const apiUrl = `${base}send-message`;
 
     if (!token) {
         console.warn('WABLAS_TOKEN not set. Skipping WA reply.');
