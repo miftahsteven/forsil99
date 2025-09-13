@@ -81,6 +81,19 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
         return;
     }
 
+    //jadikan data body seperti dalam sample menggunakan curl berikut di dokumentasi wablas
+    // $data = [
+    // 'phone' => '6281218xxxxxx',
+    // 'message' => 'hello there',
+    //];
+    const phoneClean = phone.replace(/[^0-9+]/g, '');
+    //const messageClean = message.replace(/[^a-zA-Z0-9 .,!?'"@#$%^&*()\-_=+[\]{};:<>\/\\|`~\n]/g, ' ');
+    //const messageClean = message.replace(/[\r\n]+/g, ' ').trim();
+    const messageClean = message.replace(/\s+/g, ' ').trim();
+
+    const data = { phone: phoneClean, message: messageClean };
+    console.log('Sending WA reply via Wablas:', data);
+
     const apiUrl = "https://sby.wablas.com/api/send-message"; // Example endpoint
 
     const res = await fetch(apiUrl, {
@@ -94,7 +107,8 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
         },
         //body: JSON.stringify({ phone, message }),
         //body dibuat string
-        body: new URLSearchParams({ phone, message }).toString(),
+        body: new URLSearchParams({ phone: phoneClean, message: messageClean }).toString(),
+        //body: new URLSearchParams({ phone, message }).toString(),
     });
 
     if (!res.ok) {
