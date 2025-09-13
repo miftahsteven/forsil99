@@ -71,49 +71,63 @@ function md5(input: string): string {
     return createHash('md5').update(input).digest('hex');
 }
 
+function normalizePhone(raw: string): string {
+    const d = String(raw || '').replace(/\D+/g, '');
+    if (!d) return '';
+    if (d.startsWith('62')) return d;
+    if (d.startsWith('0')) return '62' + d.slice(1);
+    if (d.startsWith('8')) return '62' + d;
+    return d;
+}
+
 async function sendWhatsappReplyWablas(phone: string, message: string) {
-    //const apiUrl = process.env.WABLAS_API_URL;
     const token = process.env.WABLAS_TOKEN;
-    const secret = process.env.WABLAS_SECRET_KEY;
+    const secret = process.env.WABLAS_SECRET_KEY; // opsional, jika dibutuhkan header terpisah
+    const base = (process.env.WABLAS_URL || 'https://sby.wablas.com').replace(/\/+$/, '');
+    const apiUrl = `${base}/api/send-message`;
 
     if (!token) {
-        console.warn('WABLAS_API_URL or WABLAS_TOKEN not set. Skipping WA reply.');
+        console.warn('WABLAS_TOKEN not set. Skipping WA reply.');
         return;
     }
 
-    //jadikan data body seperti dalam sample menggunakan curl berikut di dokumentasi wablas
-    // $data = [
-    // 'phone' => '6281218xxxxxx',
-    // 'message' => 'hello there',
-    //];
-    const phoneClean = phone.replace(/[^0-9+]/g, '');
-    //const messageClean = message.replace(/[^a-zA-Z0-9 .,!?'"@#$%^&*()\-_=+[\]{};:<>\/\\|`~\n]/g, ' ');
-    //const messageClean = message.replace(/[\r\n]+/g, ' ').trim();
-    const messageClean = message.trim();
+    const phoneClean = normalizePhone(phone);
+    const messageClean = String(message || '').replace(/\r\n/g, '\n').trim();
 
-    const dataBody = { phone: phoneClean, message: messageClean };
-    console.log('Sending WA reply via Wablas:', dataBody);
+    if (!phoneClean || !messageClean) {
+        console.warn('Invalid phone/message for Wablas:', { phoneClean, messageClean });
+        return;
+    }
 
-    const apiUrl = "https://sby.wablas.com/api/send-message"; // Example endpoint
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+        //Authorization: token, // Wablas umumnya butuh token mentah (tanpa "Bearer")
+        Authorization: secret ? `${token}.${secret}` : token, // jika instance Anda mewajibkan secret digabung di header Authorization
+    };
+    if (secret) headers['X-Secret'] = secret; // jika instance Anda mewajibkan secret terpisah
+
+    const body = new URLSearchParams({
+        phone: phoneClean,
+        message: messageClean,
+    }).toString();
 
     const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-            //'Content-Type': 'application/json',
-            // Wablas usually expects raw token (no "Bearer ")
-            //'Authorization': token,
-            Authorization: `${token}.${secret}`,
-            'Accept': 'application/json',
-        },
-        //body: JSON.stringify({ phone, message }),
-        //body dibuat string
-        body: dataBody as unknown as BodyInit,
-        //body: new URLSearchParams({ phone, message }).toString(),
+        headers,
+        body,
     });
 
+    const text = await res.text().catch(() => '');
     if (!res.ok) {
-        const text = await res.text().catch(() => '');
         console.error('Failed to send WA via Wablas:', res.status, text);
+        return;
+    }
+    try {
+        const json = JSON.parse(text);
+        console.log('Wablas response:', json);
+    } catch {
+        console.log('Wablas response text:', text);
     }
 }
 
