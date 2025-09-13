@@ -89,10 +89,10 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
     const phoneClean = phone.replace(/[^0-9+]/g, '');
     //const messageClean = message.replace(/[^a-zA-Z0-9 .,!?'"@#$%^&*()\-_=+[\]{};:<>\/\\|`~\n]/g, ' ');
     //const messageClean = message.replace(/[\r\n]+/g, ' ').trim();
-    const messageClean = message.replace(/\s+/g, ' ').trim();
+    const messageClean = message.trim();
 
-    const data = { phone: phoneClean, message: messageClean };
-    console.log('Sending WA reply via Wablas:', data);
+    const dataBody = { phone: phoneClean, message: messageClean };
+    console.log('Sending WA reply via Wablas:', dataBody);
 
     const apiUrl = "https://sby.wablas.com/api/send-message"; // Example endpoint
 
@@ -107,7 +107,7 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
         },
         //body: JSON.stringify({ phone, message }),
         //body dibuat string
-        body: new URLSearchParams({ phone: phoneClean, message: messageClean }).toString(),
+        body: dataBody as unknown as BodyInit,
         //body: new URLSearchParams({ phone, message }).toString(),
     });
 
