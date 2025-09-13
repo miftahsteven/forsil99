@@ -42,6 +42,7 @@ type IncomingMsg = {
     caption?: string;
     name?: string;
 };
+type SafeRecord = Record<string, unknown>;
 
 // -------- Helpers --------
 const ALLOWED_PASSWORD_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -57,6 +58,13 @@ function generatePassword(length = 10) {
     return out;
 }
 
+function isObject(v: unknown): v is Record<string, unknown> {
+    return typeof v === "object" && v !== null;
+}
+function isString(v: unknown): v is string {
+    return typeof v === "string";
+}
+
 function digitsOnly(s: string) {
     return s.replace(/\D+/g, "");
 }
@@ -64,7 +72,6 @@ function digitsOnly(s: string) {
 function normalizePhone(raw: string) {
     const d = digitsOnly(raw || "");
     if (!d) return "";
-
     if (d.startsWith("62")) return d;
     if (d.startsWith("0")) return "62" + d.slice(1);
     if (d.startsWith("8")) return "62" + d;
@@ -92,49 +99,54 @@ function extractText(m: IncomingMsg): string {
     );
 }
 
-function extractMessages(payload: any): { phone: string; text: string; raw: AnyObject }[] {
-    const out: { phone: string; text: string; raw: AnyObject }[] = [];
+function extractMessages(payload: unknown): { phone: string; text: string; raw: SafeRecord }[] {
+    const out: { phone: string; text: string; raw: SafeRecord }[] = [];
+
+    const pushIfValid = (it: unknown) => {
+        if (!isObject(it)) return;
+        const msg: IncomingMsg = {
+            phone: isString((it as SafeRecord).phone) ? (it as SafeRecord).phone as string : undefined,
+            sender: isString((it as SafeRecord).sender) ? (it as SafeRecord).sender as string : undefined,
+            from: isString((it as SafeRecord).from) ? (it as SafeRecord).from as string : undefined,
+            wa_number: isString((it as SafeRecord).wa_number) ? (it as SafeRecord).wa_number as string : undefined,
+            msisdn: isString((it as SafeRecord).msisdn) ? (it as SafeRecord).msisdn as string : undefined,
+            message: isString((it as SafeRecord).message) ? (it as SafeRecord).message as string : undefined,
+            text: isString((it as SafeRecord).text) ? (it as SafeRecord).text as string : undefined,
+            body: isString((it as SafeRecord).body) ? (it as SafeRecord).body as string : undefined,
+            caption: isString((it as SafeRecord).caption) ? (it as SafeRecord).caption as string : undefined,
+            name: isString((it as SafeRecord).name) ? (it as SafeRecord).name as string : undefined,
+        };
+        const phone = extractPhone(msg);
+        const text = extractText(msg);
+        if (phone && text) out.push({ phone, text, raw: it as SafeRecord });
+    };
 
     if (Array.isArray(payload)) {
-        for (const it of payload) {
-            const phone = extractPhone(it);
-            const text = extractText(it);
-            if (phone && text) out.push({ phone, text, raw: it });
-        }
+        for (const it of payload) pushIfValid(it);
         return out;
     }
 
-    // Common Wablas shapes
-    if (payload?.messages && Array.isArray(payload.messages)) {
-        for (const it of payload.messages) {
-            const phone = extractPhone(it);
-            const text = extractText(it);
-            if (phone && text) out.push({ phone, text, raw: it });
+    if (isObject(payload)) {
+        const obj = payload as Record<string, unknown>;
+        if (Array.isArray(obj.messages)) {
+            for (const it of obj.messages) pushIfValid(it);
+            return out;
         }
-        return out;
-    }
-
-    if (payload?.data && Array.isArray(payload.data)) {
-        for (const it of payload.data) {
-            const phone = extractPhone(it);
-            const text = extractText(it);
-            if (phone && text) out.push({ phone, text, raw: it });
+        if (Array.isArray(obj.data)) {
+            for (const it of obj.data) pushIfValid(it);
+            return out;
         }
-        return out;
-    }
-
-    // Single object fallback
-    if (typeof payload === "object" && payload) {
-        const phone = extractPhone(payload);
-        const text = extractText(payload);
-        if (phone && text) out.push({ phone, text, raw: payload });
+        pushIfValid(payload);
     }
 
     return out;
 }
 
-async function sendWablasMessage(toPhoneNormalized: string, message: string) {
-    const baseUrl = process.env.WABLAS_BASE_URL; // e.g. https://console.wablas.com or https://kudus.wablas.com
+async function sendWablasMessage(
+    toPhoneNormalized: string,
+    message: string
+): Promise<{ ok: true; data: unknown } | { ok: false; error: unknown }> {
+    const baseUrl = (process.env.WABLAS_BASE_URL || process.env.WABLAS_URL || "").replace(/\/+$/, "");
     const token = process.env.WABLAS_TOKEN;
 
     if (!baseUrl || !token) {
@@ -142,20 +154,17 @@ async function sendWablasMessage(toPhoneNormalized: string, message: string) {
         return { ok: false, error: "Wablas not configured" };
     }
 
-    const url = `${baseUrl.replace(/\/+$/, "")}/api/send-message`;
+    const url = `${baseUrl}/api/send-message`;
     const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-            phone: toPhoneNormalized,
-            message,
-        }),
+        body: JSON.stringify({ phone: toPhoneNormalized, message }),
     });
 
-    const json = await res.json().catch(() => ({}));
+    const json: unknown = await res.json().catch(() => ({}));
     if (!res.ok) {
         console.error("Wablas send error", res.status, json);
         return { ok: false, error: json };
@@ -166,7 +175,7 @@ async function sendWablasMessage(toPhoneNormalized: string, message: string) {
 // -------- Route Handler --------
 export async function POST(req: NextRequest) {
     try {
-        const payload = await req.json().catch(() => ({}));
+        const payload = (await req.json().catch(() => ({}))) as unknown;
         const items = extractMessages(payload);
 
         if (!items.length) {
@@ -178,7 +187,7 @@ export async function POST(req: NextRequest) {
         const col = db.collection("alumni_registrations");
         const loginUrl = process.env.APP_LOGIN_URL || "";
 
-        const results: AnyObject[] = [];
+        const results: Array<Record<string, unknown>> = [];
 
         for (const { phone, text } of items) {
             const msg = String(text || "").trim().toLowerCase();
@@ -198,16 +207,16 @@ export async function POST(req: NextRequest) {
 
             let password: string;
             if (snap.exists) {
-                const data = snap.data() || {};
-                password = data.password || generatePassword();
+                const data = (snap.data() || {}) as Record<string, unknown>;
+                password = isString(data.password) ? data.password : generatePassword();
             } else {
                 password = generatePassword();
                 await docRef.set(
                     {
                         phoneOriginal: phone,
                         phoneNormalized: normalizedPhone,
-                        username: normalizedPhone, // username = nomor whatsapp pengirim (distandardisasi)
-                        password, // consider hashing in production
+                        username: normalizedPhone,
+                        password, // hash in production
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
                         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                     },
@@ -224,7 +233,6 @@ export async function POST(req: NextRequest) {
 
             const sendRes = await sendWablasMessage(normalizedPhone, reply);
 
-            // update updatedAt after sending
             await docRef.set(
                 {
                     lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -241,10 +249,10 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ ok: true, results });
-    } catch (err: any) {
-        console.error("Webhook error:", err);
-        // Always 200 so provider doesn't retry storms, but include error detail
-        return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status: 200 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("Webhook error:", message);
+        return NextResponse.json({ ok: false, error: message }, { status: 200 });
     }
 }
 
