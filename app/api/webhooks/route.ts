@@ -15,7 +15,14 @@ type WebhookBody = {
     phone?: string;
     number?: string;
     messages?: Array<{ text?: string; from?: string; sender?: string; phone?: string; number?: string }>;
-    data?: any;
+    data?: unknown;
+};
+
+type WablasPayload = {
+    phone: string;
+    message: string;
+    priority?: boolean;
+    device_id?: string;
 };
 
 function initFirebase() {
@@ -96,7 +103,7 @@ async function sendWablasMessage(phone: string, message: string) {
 
     if (!token) throw new Error('WABLAS_TOKEN is not set');
 
-    const payload: Record<string, any> = {
+    const payload: WablasPayload = {
         phone,
         message,
         priority: true,
@@ -178,9 +185,10 @@ export async function POST(req: NextRequest) {
         await sendWablasMessage(phone, reply);
 
         return NextResponse.json({ ok: true, status: 'registered' });
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
         // Avoid leaking secrets in responses
-        console.error('webhook-error', err?.message || err);
+        console.error('webhook-error', message);
         return NextResponse.json({ ok: false, error: 'internal-error' }, { status: 500 });
     }
 }
