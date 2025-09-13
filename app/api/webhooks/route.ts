@@ -86,13 +86,15 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
     const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            //'Content-Type': 'application/json',
             // Wablas usually expects raw token (no "Bearer ")
             //'Authorization': token,
-            'Authorization': `${token}.${secret}`,
+            Authorization: `${token}.${secret}`,
             'Accept': 'application/json',
         },
-        body: JSON.stringify({ phone, message }),
+        //body: JSON.stringify({ phone, message }),
+        //body dibuat string
+        body: new URLSearchParams({ phone, message }).toString(),
     });
 
     if (!res.ok) {
