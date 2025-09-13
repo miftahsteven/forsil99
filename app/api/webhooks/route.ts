@@ -91,6 +91,9 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
         return;
     }
 
+    console.log(`Sending WA reply via Wablas to ${phone}: ${message} ---> ${apiUrl}`);
+
+
     const phoneClean = normalizePhone(phone);
     const messageClean = String(message || '').replace(/\r\n/g, '\n').trim();
 
