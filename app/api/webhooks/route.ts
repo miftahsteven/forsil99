@@ -83,7 +83,7 @@ function normalizePhone(raw: string): string {
 async function sendWhatsappReplyWablas(phone: string, message: string) {
     const token = process.env.WABLAS_TOKEN;
     const secret = process.env.WABLAS_SECRET_KEY; // opsional, jika dibutuhkan header terpisah
-    const base = process.env.WABLAS_URL;
+    const base = process.env.WABLAS_URL || "https://sby.wablas.com/api/";
     const apiUrl = `${base}send-message`;
 
     if (!token) {
@@ -99,13 +99,13 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
         return;
     }
 
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-        //Authorization: token, // Wablas umumnya butuh token mentah (tanpa "Bearer")
-        Authorization: secret ? `${token}.${secret}` : token, // jika instance Anda mewajibkan secret digabung di header Authorization
-    };
-    if (secret) headers['X-Secret'] = secret; // jika instance Anda mewajibkan secret terpisah
+    // const headers: Record<string, string> = {
+    //     'Content-Type': 'application/x-www-form-urlencoded',
+    //     Accept: 'application/json',
+    //     //Authorization: token, // Wablas umumnya butuh token mentah (tanpa "Bearer")
+    //     Authorization: secret ? `${token}.${secret}` : token, // jika instance Anda mewajibkan secret digabung di header Authorization
+    // };
+    // if (secret) headers['X-Secret'] = secret; // jika instance Anda mewajibkan secret terpisah
 
     const body = new URLSearchParams({
         phone: phoneClean,
@@ -114,7 +114,11 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
 
     const res = await fetch(apiUrl, {
         method: 'POST',
-        headers,
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+            Authorization: secret ? `${token}.${secret}` : token,
+        },
         body,
     });
 
