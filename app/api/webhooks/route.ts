@@ -71,6 +71,36 @@ function md5(input: string): string {
     return createHash('md5').update(input).digest('hex');
 }
 
+//fungsi untuk mengecek apakah nomor sender telat disimpan di auth firebase atau belum
+function checkIfPhoneRegistered(phone: string): Promise<boolean> {
+    const baseUrl = process.env.FIREBASE_DB_URL;
+    //const secret = process.env.FIREBASE_DATABASE_SECRET;
+
+    if (!baseUrl) {
+        console.warn('FIREBASE_DATABASE_URL not set. Assuming phone not registered.');
+        return Promise.resolve(false);
+    }
+
+    //const url = `${baseUrl.replace(/\/$/, '')}/alumni/auth.json${secret ? `?auth=${encodeURIComponent(secret)}` : ''}`;
+    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?orderBy="username"&equalTo="${encodeURIComponent(phone)}"`;
+    return fetch(url)
+        .then(res => {
+            if (!res.ok) {
+                console.error('Failed to check phone registration:', res.status);
+                return false;
+            }
+            return res.json();
+        })
+        .then(data => {
+            // Jika data ada dan bukan null, berarti nomor sudah terdaftar
+            return data && typeof data === 'object' && Object.keys(data).length > 0;
+        })
+        .catch(err => {
+            console.error('Error checking phone registration:', err);
+            return false;
+        });
+}
+
 function normalizePhone(raw: string): string {
     const d = String(raw || '').replace(/\D+/g, '');
     if (!d) return '';
@@ -177,14 +207,28 @@ export async function POST(req: Request) {
         }
 
         if (msg.toLowerCase().includes('daftar')) {
+            //username tidak menggunakan 62
+            //const phone = String(senderPhone).trim();
+            //cek apakah nomor sudah terdaftar di auth firebase atau belum
             const username = String(senderPhone).trim();
+            const isRegistered = await checkIfPhoneRegistered(username);
+            if (isRegistered) {
+                //jika sudah terdaftar, kirim pesan bahwa nomor sudah terdaftar
+                const replyMessage = `Nomor ${username} sudah terdaftar. Silakan login di https://forsil99.id/ dengan username & password Anda.`;
+                await sendWhatsappReplyWablas(username, replyMessage);
+                return NextResponse.json({ ok: true, info: 'Phone already registered' }, { status: 200 });
+            }
+
             const plain = genRandomPasswordPlain(7);
             const hashed = md5(plain);
-
+            const password = `${plain}`;
+            //username yang dikirim dan disimpan ke firebase sebagai username tidak menggunakan 62, namun untuk mengirim pesan WA tetap menggunakan 62           
+            const phone = username.startsWith('62') ? username : (username.startsWith('0') ? '62' + username.slice(1) : '62' + username);
             const replyMessage =
                 `Akun pendaftaran:\n` +
-                `Username: ${username}\n` +
-                `Password: ${hashed}`;
+                `Username: ${phone}\n` +
+                `Password: ${password}`
+                + `\n\nSilakan login di https://forsil99.id/ dengan username & password tersebut.`;
 
             // Send WhatsApp reply
             await sendWhatsappReplyWablas(username, replyMessage);
