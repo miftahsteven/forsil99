@@ -219,7 +219,8 @@ export async function POST(req: Request) {
             //const phone = String(senderPhone).trim();
             //cek apakah nomor sudah terdaftar di auth firebase atau belum
             const username = String(senderPhone).trim();
-            const isRegistered = await checkIfPhoneRegistered(username);
+            const usernameFinal = generateUsernameFromPhone(username);
+            const isRegistered = await checkIfPhoneRegistered(usernameFinal);
             if (isRegistered) {
                 //jika sudah terdaftar, kirim pesan bahwa nomor sudah terdaftar
                 const replyMessage = `Nomor ${username} sudah terdaftar. Silakan login di https://forsil99.id/ dengan username & password Anda.`;
@@ -230,8 +231,7 @@ export async function POST(req: Request) {
             const plain = genRandomPasswordPlain(7);
             const hashed = md5(plain);
             const password = `${plain}`;
-            //username yang dikirim dan disimpan ke firebase sebagai username tidak menggunakan 62, namun untuk mengirim pesan WA tetap menggunakan 62           
-            const usernameFinal = generateUsernameFromPhone(username);
+            //username yang dikirim dan disimpan ke firebase sebagai username tidak menggunakan 62, namun untuk mengirim pesan WA tetap menggunakan 62                       
             const replyMessage =
                 `Akun pendaftaran:\n` +
                 `Username: ${usernameFinal}\n` +
@@ -243,7 +243,7 @@ export async function POST(req: Request) {
 
             // Save to Firebase Realtime Database (username + md5 password)
             await writeToRealtimeDatabase({
-                username,
+                usernameFinal,
                 password: hashed,
                 createdAt: Date.now(),
             });
