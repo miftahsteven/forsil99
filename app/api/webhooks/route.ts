@@ -173,21 +173,26 @@ async function sendWhatsappReplyWablas(phone: string, message: string) {
     }
 }
 
-async function writeToRealtimeDatabase(payload: Record<string, unknown>) {
+async function writeToRealtimeDatabase(
+    username08: string,
+    record: Record<string, unknown>
+): Promise<void> {
     const baseUrl = process.env.FIREBASE_DB_URL;
-    //const secret = process.env.FIREBASE_DATABASE_SECRET;
-
     if (!baseUrl) {
-        console.warn('FIREBASE_DATABASE_URL not set. Skipping DB write.');
+        console.warn('FIREBASE_DB_URL not set. Skipping DB write.');
         return;
     }
 
-    //const url = `${baseUrl.replace(/\/$/, '')}/alumni/auth.json${secret ? `?auth=${encodeURIComponent(secret)}` : ''}`;
-    const url = `${baseUrl.replace(/\/$/, '')}/auth.json`;
+    const trimmed = baseUrl.replace(/\/+$/, '');
+    const secret = process.env.FIREBASE_DATABASE_SECRET; // opsional
+    const url =
+        `${trimmed}/auth/${encodeURIComponent(username08)}.json` +
+        (secret ? `?auth=${encodeURIComponent(secret)}` : '');
+
     const res = await fetch(url, {
-        method: 'POST',
+        method: 'PUT', // set langsung di key: /auth/{username08}
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(record),
     });
 
     if (!res.ok) {
@@ -195,6 +200,7 @@ async function writeToRealtimeDatabase(payload: Record<string, unknown>) {
         console.error('Failed to write to Realtime Database:', res.status, text);
     }
 }
+
 
 export async function POST(req: Request) {
     try {
@@ -238,19 +244,11 @@ export async function POST(req: Request) {
             // Send WhatsApp reply
             await sendWhatsappReplyWablas(username, replyMessage);
 
-            // Save to Firebase Realtime Database (username + md5 password)
-            // await writeToRealtimeDatabase({
-            //     username: usernameFinal,
-            //     password: hashed,
-            //     createdAt: Date.now(),
-            // });
             // write ke firebase dengan index adalah nomor telp usernameFinal
-            await writeToRealtimeDatabase({
-                [usernameFinal]: {
-                    username: usernameFinal,
-                    password: hashed,
-                    createdAt: Date.now(),
-                }
+            await writeToRealtimeDatabase(usernameFinal, {
+                username: usernameFinal,
+                password: hashed,
+                createdAt: new Date().toLocaleDateString('id-ID') //Date.now(), // jika ingin format dd/mm/yyyy: new Date().toLocaleDateString('id-ID')
             });
         }
 
