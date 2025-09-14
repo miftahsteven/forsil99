@@ -82,7 +82,7 @@ function checkIfPhoneRegistered(phone: string): Promise<boolean> {
     }
 
     //const url = `${baseUrl.replace(/\/$/, '')}/alumni/auth.json${secret ? `?auth=${encodeURIComponent(secret)}` : ''}`;
-    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?orderBy="username"&equalTo="${encodeURIComponent(phone)}"`;
+    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?orderBy="username"&equalTo=${phone}`;
     return fetch(url)
         .then(res => {
             if (!res.ok) {
