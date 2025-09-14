@@ -72,33 +72,34 @@ function md5(input: string): string {
 }
 
 //fungsi untuk mengecek apakah nomor sender telat disimpan di auth firebase atau belum
-function checkIfPhoneRegistered(phone: string): Promise<boolean> {
+async function checkIfPhoneRegistered(phone: string): Promise<boolean> {
     const baseUrl = process.env.FIREBASE_DB_URL;
-    //const secret = process.env.FIREBASE_DATABASE_SECRET;
-
     if (!baseUrl) {
-        console.warn('FIREBASE_DATABASE_URL not set. Assuming phone not registered.');
-        return Promise.resolve(false);
+        console.warn('FIREBASE_DB_URL not set. Assuming phone not registered.');
+        return false;
     }
 
-    //const url = `${baseUrl.replace(/\/$/, '')}/alumni/auth.json${secret ? `?auth=${encodeURIComponent(secret)}` : ''}`;
-    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?orderBy="username"&equalTo=${phone}`;
-    return fetch(url)
-        .then(res => {
-            if (!res.ok) {
-                console.error('Failed to check phone registration:', res.status);
-                return false;
-            }
-            return res.json();
-        })
-        .then(data => {
-            // Jika data ada dan bukan null, berarti nomor sudah terdaftar
-            return data && typeof data === 'object' && Object.keys(data).length > 0;
-        })
-        .catch(err => {
-            console.error('Error checking phone registration:', err);
+    const params = new URLSearchParams();
+    params.set('orderBy', JSON.stringify('username')); // -> "username"
+    params.set('equalTo', JSON.stringify(phone));      // -> "08123..." atau "62..."
+    // jika pakai DB secret/token:
+    // params.set('auth', process.env.FIREBASE_DATABASE_SECRET!);
+
+    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?${params.toString()}`;
+
+    try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) {
+            console.error('Failed to check phone registration:', res.status);
             return false;
-        });
+        }
+        const data: unknown = await res.json();
+        return !!(data && typeof data === 'object' && Object.keys(data as Record<string, unknown>).length > 0);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Error checking phone registration:', message);
+        return false;
+    }
 }
 
 function normalizePhone(raw: string): string {
