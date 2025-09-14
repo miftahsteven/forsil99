@@ -72,20 +72,15 @@ function md5(input: string): string {
 }
 
 //fungsi untuk mengecek apakah nomor sender telat disimpan di auth firebase atau belum
-async function checkIfPhoneRegistered(phone: string): Promise<boolean> {
+async function checkIfPhoneRegistered(username08: string): Promise<boolean> {
     const baseUrl = process.env.FIREBASE_DB_URL;
     if (!baseUrl) {
         console.warn('FIREBASE_DB_URL not set. Assuming phone not registered.');
         return false;
     }
 
-    const params = new URLSearchParams();
-    params.set('orderBy', JSON.stringify('username')); // -> "username"
-    params.set('equalTo', JSON.stringify(phone));      // -> "08123..." atau "62..."
-    // jika pakai DB secret/token:
-    // params.set('auth', process.env.FIREBASE_DATABASE_SECRET!);
-
-    const url = `${baseUrl.replace(/\/$/, '')}/auth.json?${params.toString()}`;
+    const trimmed = baseUrl.replace(/\/+$/, '');
+    const url = `${trimmed}/auth/${encodeURIComponent(username08)}.json`;
 
     try {
         const res = await fetch(url, { cache: 'no-store' });
@@ -94,7 +89,8 @@ async function checkIfPhoneRegistered(phone: string): Promise<boolean> {
             return false;
         }
         const data: unknown = await res.json();
-        return !!(data && typeof data === 'object' && Object.keys(data as Record<string, unknown>).length > 0);
+        // Realtime DB returns null if key doesn't exist
+        return data !== null;
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error('Error checking phone registration:', message);
@@ -243,10 +239,18 @@ export async function POST(req: Request) {
             await sendWhatsappReplyWablas(username, replyMessage);
 
             // Save to Firebase Realtime Database (username + md5 password)
+            // await writeToRealtimeDatabase({
+            //     username: usernameFinal,
+            //     password: hashed,
+            //     createdAt: Date.now(),
+            // });
+            // write ke firebase dengan index adalah nomor telp usernameFinal
             await writeToRealtimeDatabase({
-                username: usernameFinal,
-                password: hashed,
-                createdAt: Date.now(),
+                [usernameFinal]: {
+                    username: usernameFinal,
+                    password: hashed,
+                    createdAt: Date.now(),
+                }
             });
         }
 
