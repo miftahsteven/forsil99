@@ -243,7 +243,7 @@ export async function POST(req: Request) {
 
             // Save to Firebase Realtime Database (username + md5 password)
             await writeToRealtimeDatabase({
-                usernameFinal,
+                username: usernameFinal,
                 password: hashed,
                 createdAt: Date.now(),
             });
