@@ -13,6 +13,7 @@ export interface Alumni {
   nohp: string;
   tanggalLahir: string;
   pekerjaan: string;
+  photoUrl?: string; // tambahkan properti photoUrl
   createdAt?: number;
 }
 
@@ -38,6 +39,7 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
   const tanggalLahir = isString(v.tanggalLahir) ? v.tanggalLahir : '';
   const pekerjaan = isString(v.pekerjaan) ? v.pekerjaan : '';
   const createdAt = isNumber(v.createdAt) ? v.createdAt : undefined;
+  const photoUrl = isString(v.photoUrl) ? v.photoUrl : undefined;
 
   return {
     id,
@@ -48,6 +50,7 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
     nohp,
     tanggalLahir,
     pekerjaan,
+    photoUrl,
     createdAt,
   };
 }
@@ -104,10 +107,18 @@ export async function addAlumniWithPhoto(
 }
 
 // tambah update user jika user sudah ada
-export async function updateAlumni(id: string, data: Partial<Omit<Alumni, 'id' | 'createdAt'>>) {
+export async function updateAlumni(id: string, data: Partial<Alumni> & { photoFile?: File; }) {
+
   const alumniRef = ref(db, `alumni/${id}`);
+  //update data alumni existing termasuk photo profile jika ada
+  if (data.photoFile) {
+    //update data photo profile dan upload foto ke folder public/profiles
+    const photoUrl = await uploadProfilePhoto(id, data.photoFile);
+    data = { ...data, photoFile: photoUrl };
+    delete data.photoFile;
+  }
   await update(alumniRef, data);
-  return id;
+  return true;
 }
 
 export async function addAuthLogin(data: { username: string; password?: string; role?: string; }) {
