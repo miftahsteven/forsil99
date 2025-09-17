@@ -1,6 +1,7 @@
 "use client";
 import Link from 'next/link';
 import LogoutButton from '../../../components/LogoutButton';
+import HapusData from '../../../components/HapusData';
 
 
 export default function Home() {
@@ -14,6 +15,8 @@ export default function Home() {
         {/** buat link Info UKM Alumni, dan jika diklik akan muncul alert "Akan Segera Hadir" */}
         <li><a href="#" onClick={() => alert('Akan Segera Hadir')} className="text-gray-500 cursor-not-allowed">Info UKM Alumni (soon)</a></li>
         {/** membuat Link Untuk Logout */}
+        {/** membuat link hapus data user memanggil api/hapusdata */}
+        <li><HapusData /></li>
         <li><LogoutButton /></li>
       </ul>
     </div>

@@ -15,6 +15,7 @@ export interface Alumni {
   pekerjaan: string;
   photoUrl?: string; // tambahkan properti photoUrl
   createdAt?: number;
+  nomorAlumni?: string; // tambahkan properti nomorAlumni
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -40,6 +41,7 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
   const pekerjaan = isString(v.pekerjaan) ? v.pekerjaan : '';
   const createdAt = isNumber(v.createdAt) ? v.createdAt : undefined;
   const photoUrl = isString(v.photoUrl) ? v.photoUrl : undefined;
+  const nomorAlumni = isString(v.id) ? v.id : undefined;
 
   return {
     id,
@@ -52,6 +54,7 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
     pekerjaan,
     photoUrl,
     createdAt,
+    nomorAlumni
   };
 }
 

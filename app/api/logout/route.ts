@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 export async function POST() {
   const res = NextResponse.json({ success: true });
-  // Hapus cookie session & username
-  res.cookies.set('session', '', { path: '/', maxAge: 0 });
-  res.cookies.set('username', '', { path: '/', maxAge: 0 });
+  res.cookies.set('session', '', { path: '/', httpOnly: true, maxAge: 0 });
+  res.cookies.set('username', '', { path: '/', httpOnly: false, maxAge: 0 });
   return res;
 }
 

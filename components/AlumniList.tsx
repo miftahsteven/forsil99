@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/client';
 import { ref, onValue, off, DataSnapshot } from 'firebase/database';
 import { mapSnapshot, Alumni } from '../lib/alumni';
+import Modal from './Modal';
+import QRCode from 'react-qr-code';
 
 interface AlumniWithPhoto extends Alumni {
   photoUrl?: string; // tambahkan properti photoUrl
@@ -12,6 +14,8 @@ export default function AlumniList() {
   const [alumni, setAlumni] = useState<AlumniWithPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [labeljumlah, setLabeljumlah] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
 
 
   useEffect(() => {
@@ -121,31 +125,139 @@ export default function AlumniList() {
       {/** tampilkan list alumni dalam bentuk grid 2 kolom pada layar kecil, 3 kolom pada layar sedang, dan 4 kolom pada layar besar */}
 
       {alumni.map(a => (
-        <div key={a.id} className="border rounded p-3">
-          {/** munculkan foto dari photoUrl di section ini. disebelah kiri list nama */}
-          {a.photoUrl && (
-            <img
-              src={a.photoUrl}
-              alt={`Foto ${a.name}`}
-              className="h-16 w-16 object-cover rounded-full mr-4 float-left"
-            />
-          )}
-          {/** jika tidak ada photoUrl, munculkan placeholder */}
-          {!a.photoUrl && (
-            <div className="h-16 w-16 bg-gray-200 rounded-full mr-4 float-left flex items-center justify-center text-gray-500 font-size-sm">
-              No Photo
+        <button
+          key={a.id ?? a.nomorAlumni ?? a.name}
+          type="button"
+          onClick={() => { setSelected(a); setShowModal(true); }}
+          className="mt-4 text-left text-sm text-black-600 w-full">
+          <div key={a.id} className="border rounded p-3">
+            {/** munculkan foto dari photoUrl di section ini. disebelah kiri list nama */}
+            {a.photoUrl && (
+              <img
+                src={a.photoUrl}
+                alt={`Foto ${a.name}`}
+                className="h-16 w-16 object-cover rounded-full mr-4 float-left"
+              />
+            )}
+            {/** jika tidak ada photoUrl, munculkan placeholder */}
+            {!a.photoUrl && (
+              <div className="h-16 w-16 bg-gray-200 rounded-full mr-4 float-left flex items-center justify-center text-gray-500 font-size-sm">
+                No Photo
+              </div>
+            )}
+            <div className="font-semibold">{a.name}</div>
+            <div className="text-sm text-gray-600">{a.nomorAlumni}</div>
+            <div className="text-xs text-gray-500">
+              {a.program || '-'} | No. HP: {a.nohp || '-'}
             </div>
-          )}
-          <div className="font-semibold">{a.name}</div>
-          <div className="text-sm text-gray-600">{a.email}</div>
-          <div className="text-xs text-gray-500">
-            {a.program || '-'} | No. HP: {a.nohp || '-'}
           </div>
-        </div>
+        </button>
       ))}
       <div className="mt-4 text-sm text-gray-600">Total Alumni: {alumni.length}</div>
       <div className="text-sm text-gray-600">{labeljumlah}</div>
 
-    </div>
+      {/** buat modal ketika list di klik, menampilkan sebuah modal yang berisi tampilan seperti sebuah tampilkan IDCard atau KTP atau SIM */}
+      {/** tampilan ini berupa detail data dari user yang di klik detailnya */}
+      <div>
+        <Modal open={showModal} onClose={() => setShowModal(false)} title="">
+          {selected && (
+            <div className="flex justify-center">
+              {/* Kartu identitas */}
+              <div className="w-[480px] rounded-xl shadow-lg border relative overflow-hidden bg-white">
+                {/* Header/Band warna */}
+                <div className="h-10 bg-blue-600">
+                  <div className='text-white font-semibold text-center pt-2'>
+                    Detail Alumni
+                  </div>
+                </div>
+                {/* Konten Kartu */}
+                <div className="p-4 flex">
+                  <div className="mr-4">
+                    {selected.photoUrl ? (
+                      <img
+                        src={selected.photoUrl}
+                        alt={`Foto ${selected.name}`}
+                        className="h-20 w-20 object-cover rounded-md border"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500">
+                        No Photo
+                      </div>
+                    )}
+                    <QRCode
+                      value={String(selected.nomorAlumni)}
+                      size={70}
+                      bgColor="#FFFFFF"
+                      fgColor="#000000"
+                      level="L"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="text-sm flex-1">
+                    <div className="grid grid-cols-2">
+                      <div>
+                        <div className="text-xs text-gray-500">NIA</div>
+                        <div className="font-semibold">{selected.nomorAlumni ?? '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Nama</div>
+                        <div className="font-medium">{selected.name ?? '-'}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2">
+                      <div className="mt-2">
+                        <div className="text-xs text-gray-500">No. Telp/Whatsapp</div>
+                        <div className="font-medium">{selected.nohp ?? '-'}</div>
+                      </div>
+                      <div className="mt-2">
+                        <div className="text-xs text-gray-500">Email</div>
+                        <div className="font-medium">
+                          {selected.email ? (selected.email.length > 25 ? selected.email.slice(0, 25) + '...' : selected.email) : '-'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2">
+                      <div>
+                        <div className="text-xs text-gray-500">Jurusan</div>
+                        <div className="font-medium">{selected.program ?? '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Tahun Lulus</div>
+                        <div className="font-medium">{selected.graduationYear ?? '-'}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2">
+                      <div>
+                        <div className="text-xs text-gray-500">Pekerjaan</div>
+                        <div className="font-medium">{
+                          // batasi pekerjaan maksimal 30 karakter
+                          selected.pekerjaan ? (selected.pekerjaan.length > 30 ? selected.pekerjaan.slice(0, 30) + '...' : selected.pekerjaan) : '-'
+                        }</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Tanggal Lahir</div>
+                        <div className="font-medium">
+                          {
+                            selected.tanggalLahir
+                              ? new Date(selected.tanggalLahir).toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric'
+                              })
+                              : '-'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+      </div >
+    </div >
+
+
   );
 }

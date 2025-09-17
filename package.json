@@ -16,6 +16,7 @@
     "nodemailer": "^7.0.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-qr-code": "^2.0.18",
     "resend": "^6.0.2"
   },
   "devDependencies": {
