@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ message: 'Data dan user berhasil dihapus' });
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Error menghapus data atau user:', message);
+        return NextResponse.json({ error: 'Gagal menghapus data atau user: ' + message }, { status: 500 });
     }
 }
