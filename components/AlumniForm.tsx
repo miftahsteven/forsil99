@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { addAlumni, addAuthLogin, addAlumniWithPhoto, updateAlumni } from '../lib/alumni';
 import Modal from './Modal';
 import { get } from 'http';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   onSuccess?: () => void;
@@ -19,6 +20,9 @@ type AlumniData = {
   pekerjaan?: string;
   photoprofile?: string;
   photoUrl?: string;
+  alamat?: string;
+  createdAt?: number;
+  nomorAlumni?: string;
 };
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -90,6 +94,7 @@ export default function AlumniForm({ onSuccess }: Props) {
   const [alumniNumber, setAlumniNumber] = useState<string | null>(null);
 
   const didFetch = useRef(false);
+  const r = useRouter();
 
   React.useEffect(() => {
     if (didFetch.current) return;
@@ -111,6 +116,8 @@ export default function AlumniForm({ onSuccess }: Props) {
           photoUrl: data.photoUrl || '',
           twodigityears: data.tanggalLahir ? String(data.tanggalLahir).slice(-2) : '',
           typejurusan: data.program === 'IPA' ? '1' : data.program === 'IPS' ? '2' : data.program === 'Bahasa' ? '3' : '0',
+          nomorAlumni: data.nomorAlumni || '',
+          alamat: data.alamat || '',
         }));
       }
     });
@@ -132,6 +139,7 @@ export default function AlumniForm({ onSuccess }: Props) {
       photoUrl: '',
       twodigityears: '',
       typejurusan: '',
+      alamat: ''
     });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -204,12 +212,13 @@ export default function AlumniForm({ onSuccess }: Props) {
         form.id = induk1 + induk2 + newAlumniNumber;
         //jika tidak ada, maka simpan data alumni baru
 
-        const id = photoFile ? await addAlumniWithPhoto(form, photoFile) : await addAlumni(form);
+        const id = photoFile ? await addAlumniWithPhoto(form.id, form, photoFile) : await addAlumni(form);
+        console.log('id baru', id);
         if (id) {
           //await addAuthLogin({ username: form.email, role: 'alumni' });
           //kirim wha
           setMsg("Registrasi berhasil. Terima kasih telah mendaftar sebagai alumni. Selalu lakukan update data Anda jika ada perubahan.");
-          setForm({ id: '', name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '', photoUrl: '', twodigityears: '', typejurusan: '' });
+          setForm({ id: '', name: '', email: '', program: '', graduationYear: new Date().getFullYear(), nohp: '', tanggalLahir: '', pekerjaan: '', photoprofile: '', photoUrl: '', twodigityears: '', typejurusan: '', alamat: '' });
           onSuccess?.();
         } else {
           setMsg("Gagal menyimpan data alumni.");
@@ -230,10 +239,14 @@ export default function AlumniForm({ onSuccess }: Props) {
         console.error("Gagal mengirim WhatsApp:", e);
       }
 
+      //langsung menuju halaman home
+      setMsg("Berhasil update data alumni.");
+      r.push('/home');
+
     } catch (e: unknown) {
       //setMsg("Gagal menyimpan: " + e.message);
       const message = e instanceof Error ? e.message : String(e);
-      setMsg("Gagal menyimpans: " + message);
+      setMsg("Gagal menyimpan: " + message);
     } finally {
       setLoading(false);
     }
@@ -287,6 +300,10 @@ export default function AlumniForm({ onSuccess }: Props) {
         <div>
           <label className='block text-sm font-medium'>Pekerjaan</label>
           <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" />
+        </div>
+        <div>
+          <label className='block text-sm font-medium'>Alamat Rumah (Surat Menyurat)</label>
+          <input name="alamat" value={form.alamat} onChange={handleChange} className="border w-full p-2 rounded" />
         </div>
         {/** tambahkan upload gambar (jpg, png) untuk profil picture. Upload ke area asset/image */}
         <div>

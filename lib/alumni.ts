@@ -1,5 +1,5 @@
 import { db } from '../firebase/client';
-import { ref, push, serverTimestamp, DataSnapshot, update } from 'firebase/database';
+import { ref, push, serverTimestamp, DataSnapshot, update, set } from 'firebase/database';
 //import md5 from 'md5'; //gunakan md5 dari npm
 import md5 from 'blueimp-md5';
 
@@ -16,6 +16,7 @@ export interface Alumni {
   photoUrl?: string; // tambahkan properti photoUrl
   createdAt?: number;
   nomorAlumni?: string; // tambahkan properti nomorAlumni
+  alamat?: string; // tambahkan properti alamat
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -42,6 +43,7 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
   const createdAt = isNumber(v.createdAt) ? v.createdAt : undefined;
   const photoUrl = isString(v.photoUrl) ? v.photoUrl : undefined;
   const nomorAlumni = isString(v.id) ? v.id : undefined;
+  const alamat = isString(v.alamat) ? v.alamat : undefined;
 
   return {
     id,
@@ -54,7 +56,8 @@ function coerceAlumni(id: string, v: unknown): Alumni | null {
     pekerjaan,
     photoUrl,
     createdAt,
-    nomorAlumni
+    nomorAlumni,
+    alamat,
   };
 }
 
@@ -79,34 +82,35 @@ async function uploadProfilePhoto(firebaseId: string, file: File) {
 }
 
 export async function addAlumniWithPhoto(
-  data: Omit<Alumni, 'id' | 'createdAt'>,
+  id: string,
+  data: Omit<Alumni, 'id' | 'createdAt' | 'photoUrl'>,
   file?: File
 ) {
-  const alumniRef = ref(db, 'alumni');
-  const newRef = await push(alumniRef, {
-    ...data,
-    createdAt: Date.now(),
-  });
 
+  const pathRef = ref(db, `alumni/${id}`);
+
+  // Upload foto dulu (jika ada), lalu simpan record lengkap dengan set (tanpa push key)
+  let photoUrl: string | undefined;
   if (file) {
     try {
-      const fd = new FormData();
-      fd.append('id', newRef.key as string);
-      fd.append('file', file);
-      const resp = await fetch('/api/upload-profile', { method: 'POST', body: fd });
-      const json = await resp.json();
-      if (json.success) {
-        await update(ref(db, `alumni/${newRef.key}`), { photoUrl: json.url });
-      } else {
-        console.warn('Upload profile failed:', json.error);
-      }
+      photoUrl = await uploadProfilePhoto(id, file);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: message };
+      console.warn('Upload profile failed:', message);
     }
   }
 
-  return newRef.key;
+  await set(pathRef, {
+    ...data,
+    photoUrl,
+    // simpan juga nomorAlumni = id jika ingin disalin ke field
+    nomorAlumni: id,
+    createdAt: Date.now(), // atau serverTimestamp()
+  });
+
+  // kembalikan id custom sebagai "key"
+  return id;
+
 }
 
 // tambah update user jika user sudah ada
@@ -117,7 +121,7 @@ export async function updateAlumni(id: string, data: Partial<Alumni> & { photoFi
   if (data.photoFile) {
     //update data photo profile dan upload foto ke folder public/profiles
     const photoUrl = await uploadProfilePhoto(id, data.photoFile);
-    data = { ...data, photoFile: photoUrl };
+    data = { ...data, photoUrl };
     delete data.photoFile;
   }
   await update(alumniRef, data);

@@ -249,6 +249,15 @@ export default function AlumniList() {
                         </div>
                       </div>
                     </div>
+                    <div className="mt-2">
+                      <div>
+                        <div className="text-xs text-gray-500">Alamat Rumah</div>
+                        <div className="font-medium">{
+                          // batasi alamat maksimal 30 karakter
+                          selected.alamat ? (selected.alamat.length > 100 ? selected.alamat.slice(0, 100) + '...' : selected.alamat) : '-'
+                        }</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
