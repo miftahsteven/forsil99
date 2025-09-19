@@ -17,6 +17,16 @@ export default function AlumniList() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
 
+  const resolvePhotoUrl = (photoUrl?: string) => {
+    if (!photoUrl) return undefined;
+    // If already absolute or data/blob, use as-is
+    if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
+
+    // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
+    const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
+    const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
+    return base ? `${base}${path}` : path; // fallback to relative
+  };
 
   useEffect(() => {
     const r = ref(db, 'alumni');
@@ -134,7 +144,7 @@ export default function AlumniList() {
             {/** munculkan foto dari photoUrl di section ini. disebelah kiri list nama */}
             {a.photoUrl && (
               <img
-                src={a.photoUrl}
+                src={resolvePhotoUrl(a.photoUrl)}
                 alt={`Foto ${a.name}`}
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
               />
@@ -174,8 +184,9 @@ export default function AlumniList() {
                 <div className="p-4 flex">
                   <div className="mr-4">
                     {selected.photoUrl ? (
+                      //foto alumni tidak terlihat sepertinya butuh URL yang benar
                       <img
-                        src={selected.photoUrl}
+                        src={resolvePhotoUrl(selected.photoUrl)}
                         alt={`Foto ${selected.name}`}
                         className="h-20 w-20 object-cover rounded-md border"
                       />
