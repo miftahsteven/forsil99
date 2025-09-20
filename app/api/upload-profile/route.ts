@@ -11,11 +11,29 @@ async function ensureProfilesDir(): Promise<string> {
   return dir;
 }
 
+// async function deleteExistingProfileFiles(dir: string, id: string) {
+//   try {
+//     const entries = await fs.readdir(dir, { withFileTypes: true });
+//     const targets = entries
+//       .filter((e) => e.isFile() && e.name.startsWith(`${id}.`))
+//       .map((e) => path.join(dir, e.name));
+//     await Promise.all(
+//       targets.map((p) =>
+//         fs.unlink(p).catch(() => {
+//           /* ignore missing or locked */
+//         })
+//       )
+//     );
+//   } catch {
+//     /* ignore */
+//   }
+// }
+//membuat fungsi deleteExistingProfileFiles menghapus file lama dengan pola id-*.ext
 async function deleteExistingProfileFiles(dir: string, id: string) {
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     const targets = entries
-      .filter((e) => e.isFile() && e.name.startsWith(`${id}.`))
+      .filter((e) => e.isFile() && e.name.startsWith(`${id}-`))
       .map((e) => path.join(dir, e.name));
     await Promise.all(
       targets.map((p) =>
@@ -29,22 +47,38 @@ async function deleteExistingProfileFiles(dir: string, id: string) {
   }
 }
 
+// sanitize ekstensi file, hanya huruf dan angka, default jpg jika tidak ada
+
 function sanitizeExt(filename: string | undefined): string {
   const original = filename || 'photo';
   const ext = original.includes('.') ? original.split('.').pop() : 'jpg';
   return (ext || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
 }
 
+// async function saveProfileFile(id: string, file: File): Promise<string> {
+//   const bytes = Buffer.from(await file.arrayBuffer());
+//   const dir = await ensureProfilesDir();
+//   await deleteExistingProfileFiles(dir, id); // hapus file lama dengan id yang sama
+
+//   const safeExt = sanitizeExt(file.name);
+//   const filePath = path.join(dir, `${id}.${safeExt}`);
+//   await fs.writeFile(filePath, bytes);
+
+//   return `/profiles/${id}.${safeExt}`;
+// }
+
+//membuat profile file menyimpan dengan nama id-timestamp.ext. Dan juga menghapus file lama
 async function saveProfileFile(id: string, file: File): Promise<string> {
   const bytes = Buffer.from(await file.arrayBuffer());
   const dir = await ensureProfilesDir();
   await deleteExistingProfileFiles(dir, id); // hapus file lama dengan id yang sama
 
   const safeExt = sanitizeExt(file.name);
-  const filePath = path.join(dir, `${id}.${safeExt}`);
+  const timestamp = Date.now();
+  const filePath = path.join(dir, `${id}-${timestamp}.${safeExt}`);
   await fs.writeFile(filePath, bytes);
 
-  return `/profiles/${id}.${safeExt}`;
+  return `/profiles/${id}-${timestamp}.${safeExt}`;
 }
 
 export async function POST(req: NextRequest) {
