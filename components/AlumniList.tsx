@@ -37,7 +37,6 @@ export default function AlumniList() {
   //   return url.startsWith('/') ? url : `/${url}`;
   // };
   const resolvePhotoUrl = (photoUrl?: string) => {
-    ś
     if (!photoUrl) return undefined;
     const url = String(photoUrl).trim();
 
