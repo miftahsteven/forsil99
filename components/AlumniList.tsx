@@ -28,27 +28,28 @@ export default function AlumniList() {
   //   const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
   //   return base ? `${base}${path}` : path; // fallback to relative
   // };
-  const resolvePhotoUrl = (photoUrl?: string) => {
-    if (!photoUrl) return undefined;
-    const url = String(photoUrl).trim();
-    if (/^(https?:|data:|blob:)/i.test(url)) return url;
-    // pakai path relatif ke folder public
-    if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
-    return url.startsWith('/') ? url : `/${url}`;
-  };
-  // const resolvePhotoUrl = (photoUrl?: string) => {ś
+  // const resolvePhotoUrl = (photoUrl?: string) => {
   //   if (!photoUrl) return undefined;
   //   const url = String(photoUrl).trim();
-
-  //   // Jika sudah absolute atau data/blob
   //   if (/^(https?:|data:|blob:)/i.test(url)) return url;
-
-  //   // Jika menunjuk ke public/profiles, pakai path relatif ke origin
+  //   // pakai path relatif ke folder public
   //   if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
-
-  //   // Fallback umum: relative path
   //   return url.startsWith('/') ? url : `/${url}`;
   // };
+  const resolvePhotoUrl = (photoUrl?: string) => {
+    ś
+    if (!photoUrl) return undefined;
+    const url = String(photoUrl).trim();
+
+    // Jika sudah absolute atau data/blob
+    if (/^(https?:|data:|blob:)/i.test(url)) return url;
+
+    // Jika menunjuk ke public/profiles, pakai path relatif ke origin
+    if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
+
+    // Fallback umum: relative path
+    return url.startsWith('/') ? url : `/${url}`;
+  };
 
   useEffect(() => {
     const r = ref(db, 'alumni');
@@ -165,12 +166,12 @@ export default function AlumniList() {
           <div key={a.id} className="border rounded p-3">
             {/** munculkan foto dari photoUrl di section ini. disebelah kiri list nama */}
             {a.photoUrl && (
-              // <Image src={resolvePhotoUrl(a.photoUrl)!} alt={`Foto ${a.name}`} width={64} height={64} className="h-16 w-16 object-cover rounded-full mr-4 float-left" />
-              <img
-                src={resolvePhotoUrl(a.photoUrl)}
-                alt={`Foto ${a.name}`}
-                className="h-16 w-16 object-cover rounded-full mr-4 float-left"
-              />
+              <Image src={resolvePhotoUrl(a.photoUrl)!} alt={`Foto ${a.name}`} width={64} height={64} className="h-16 w-16 object-cover rounded-full mr-4 float-left" />
+              // <img
+              //   src={resolvePhotoUrl(a.photoUrl)}
+              //   alt={`Foto ${a.name}`}
+              //   className="h-16 w-16 object-cover rounded-full mr-4 float-left"
+              // />
             )}
             {/** jika tidak ada photoUrl, munculkan placeholder */}
             {!a.photoUrl && (
@@ -208,12 +209,12 @@ export default function AlumniList() {
                   <div className="mr-4">
                     {selected.photoUrl ? (
                       //foto alumni tidak terlihat sepertinya butuh URL yang benar
-                      <img
-                        src={resolvePhotoUrl(selected.photoUrl)}
-                        alt={`Foto ${selected.name}`}
-                        className="h-20 w-20 object-cover rounded-md border"
-                      />
-                      // <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={64} height={64} className="h-20 w-20 object-cover rounded-md border" />
+                      // <img
+                      //   src={resolvePhotoUrl(selected.photoUrl)}
+                      //   alt={`Foto ${selected.name}`}
+                      //   className="h-20 w-20 object-cover rounded-md border"
+                      // />
+                      <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={64} height={64} className="h-20 w-20 object-cover rounded-md border" />
                     ) : (
                       <div className="h-20 w-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500">
                         No Photo
