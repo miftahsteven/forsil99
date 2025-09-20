@@ -18,15 +18,23 @@ export default function AlumniList() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
 
+  // const resolvePhotoUrl = (photoUrl?: string) => {
+  //   if (!photoUrl) return undefined;
+  //   // If already absolute or data/blob, use as-is
+  //   if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
+
+  //   // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
+  //   const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
+  //   const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
+  //   return base ? `${base}${path}` : path; // fallback to relative
+  // };
   const resolvePhotoUrl = (photoUrl?: string) => {
     if (!photoUrl) return undefined;
-    // If already absolute or data/blob, use as-is
-    if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
-
-    // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
-    const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
-    const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
-    return base ? `${base}${path}` : path; // fallback to relative
+    const url = String(photoUrl).trim();
+    if (/^(https?:|data:|blob:)/i.test(url)) return url;
+    // pakai path relatif ke folder public
+    if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
+    return url.startsWith('/') ? url : `/${url}`;
   };
   // const resolvePhotoUrl = (photoUrl?: string) => {ś
   //   if (!photoUrl) return undefined;
