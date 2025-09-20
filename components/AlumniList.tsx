@@ -58,14 +58,37 @@ export default function AlumniList() {
     return url.startsWith('/') ? url : `/${url}`;
   };
 
-  const flipExtCase = (url: string) => {
-    const u = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-    const m = u.pathname.match(/\.(jpg|jpeg)$/i);
-    if (!m) return url;
-    const ext = m[1];
-    const flipped = /[a-z]/.test(ext) ? ext.toUpperCase() : ext.toLowerCase();
-    u.pathname = u.pathname.replace(/\.(jpg|jpeg)$/i, `.${flipped}`);
-    return u.toString().replace(u.origin, ''); // kembalikan sebagai path relatif
+  // Buat daftar kandidat URL dengan variasi ekstensi dan case
+  const buildImageCandidates = (src: string) => {
+    const u = new URL(src, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const q = u.search; const h = u.hash;
+    const m = u.pathname.match(/^(.+)\.([^.]+)$/);
+    const base = m ? m[1] : u.pathname;
+    const ext = (m ? m[2] : '').toLowerCase();
+
+    const preferred = ext ? [ext] : [];
+    const all = ['jpg', 'jpeg', 'png', 'webp'].filter(e => !preferred.includes(e));
+    const pool = [...preferred, ...all];
+
+    const variants: string[] = [];
+    for (const e of pool) {
+      variants.push(`${base}.${e}`);         // lowercase
+      variants.push(`${base}.${e.toUpperCase()}`); // UPPERCASE
+    }
+    // kembalikan dengan query/hash asli, relatif ke origin
+    return Array.from(new Set(variants.map(p => (p + q + h))));
+  };
+
+  const tryNextCandidate = (img: HTMLImageElement) => {
+    const current = img.getAttribute('src') || '';
+    const list = img.dataset.candidates ? JSON.parse(img.dataset.candidates) as string[] : buildImageCandidates(current);
+    img.dataset.candidates = JSON.stringify(list);
+    const idx = Number(img.dataset.candIndex || '0');
+
+    if (idx >= list.length - 1) return false;
+    img.dataset.candIndex = String(idx + 1);
+    img.src = list[idx + 1];
+    return true;
   };
 
   useEffect(() => {
@@ -192,10 +215,9 @@ export default function AlumniList() {
                 unoptimized
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
                 onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  const img = e.currentTarget;
-                  if (img.dataset.triedFlip === '1') return; // cegah loop
-                  img.dataset.triedFlip = '1';
-                  img.src = flipExtCase(img.src);
+                  if (!tryNextCandidate(e.currentTarget)) {
+                    e.currentTarget.src = '/profiles/placeholder.png';
+                  }
                 }}
               />
             )}
@@ -243,10 +265,9 @@ export default function AlumniList() {
                         unoptimized
                         className="h-20 w-20 object-cover rounded-md border"
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          const img = e.currentTarget;
-                          if (img.dataset.triedFlip === '1') return;
-                          img.dataset.triedFlip = '1';
-                          img.src = flipExtCase(img.src);
+                          if (!tryNextCandidate(e.currentTarget)) {
+                            e.currentTarget.src = '/profiles/placeholder.png';
+                          }
                         }}
                       />
                       // <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={64} height={64} className="h-20 w-20 object-cover rounded-md border" />
