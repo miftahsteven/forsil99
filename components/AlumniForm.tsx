@@ -78,6 +78,8 @@ const getAlumniNumber = async (): Promise<string | null> => {
     }
     const data: unknown = await res.json();
     if (isObject(data) && 'newId' in data && typeof data.newId === 'number') {
+      console.log('newId', data.newId);
+
       return String(data.newId).padStart(4, '0');
     }
     return null;

@@ -9,10 +9,18 @@ function parseMaxId(data: unknown): number {
         for (const v of values) {
             if (v && typeof v === 'object') {
                 const idUnknown = (v as { id?: unknown }).id;
-                const id =
-                    typeof idUnknown === 'number'
-                        ? idUnknown
-                        : Number.parseInt(String(idUnknown ?? '0'), 10);
+                // ID bisa berbentuk seperti format berikut : 81A0001, 80S0002 dll, yang diambil 4 digit terakhirnya
+                // lalu tambahkan ke next number untuk nantinya dikirim kembal ke frontend
+                // contoh: 81A0001 -> 0001 -> 1
+                const idStr = String(idUnknown ?? '').slice(-4);
+                const id = Number.parseInt(idStr, 10);
+                // Alternatif jika ID hanya berupa angka
+                // const id =
+                //     typeof idUnknown === 'number'
+                //         ? idUnknown
+                //         : Number.parseInt(String(idUnknown ?? '0'), 10);
+                // 
+                //console.log('id value:', id);
                 if (!Number.isNaN(id) && id > lastId) lastId = id;
             }
         }

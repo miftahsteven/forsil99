@@ -205,17 +205,17 @@ export default function AlumniList() {
                     />
                   </div>
                   <div className="text-sm flex-1">
-                    <div className="grid grid-cols-2">
+                    <div className="grid">
                       <div>
                         <div className="text-xs text-gray-500">NIA</div>
-                        <div className="font-semibold">{selected.nomorAlumni ?? '-'}</div>
+                        <div className="font-bold">{selected.nomorAlumni ?? '-'}</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Nama</div>
                         <div className="font-medium">{selected.name ?? '-'}</div>
                       </div>
                     </div>
-                    <div className="mt-2 grid grid-cols-2">
+                    <div className="mt-2 grid">
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">No. Telp/Whatsapp</div>
                         <div className="font-medium">{selected.nohp ?? '-'}</div>
@@ -252,7 +252,7 @@ export default function AlumniList() {
                             selected.tanggalLahir
                               ? new Date(selected.tanggalLahir).toLocaleDateString('id-ID', {
                                 day: '2-digit',
-                                month: 'long',
+                                month: '2-digit',
                                 year: 'numeric'
                               })
                               : '-'
