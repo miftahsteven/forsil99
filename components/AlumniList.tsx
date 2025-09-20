@@ -205,7 +205,7 @@ export default function AlumniList() {
                       //   alt={`Foto ${selected.name}`}
                       //   className="h-20 w-20 object-cover rounded-md border"
                       // />
-                      <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={16} height={16} className="h-20 w-20 object-cover rounded-md border" />
+                      <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={64} height={64} className="h-20 w-20 object-cover rounded-md border" />
                     ) : (
                       <div className="h-20 w-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500">
                         No Photo
