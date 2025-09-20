@@ -36,18 +36,36 @@ export default function AlumniList() {
   //   if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
   //   return url.startsWith('/') ? url : `/${url}`;
   // };
+  // const resolvePhotoUrl = (photoUrl?: string) => {
+  //   if (!photoUrl) return undefined;
+  //   const url = String(photoUrl).trim();
+
+  //   // Jika sudah absolute atau data/blob
+  //   if (/^(https?:|data:|blob:)/i.test(url)) return url;
+
+  //   // Jika menunjuk ke public/profiles, pakai path relatif ke origin
+  //   if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
+
+  //   // Fallback umum: relative path
+  //   return url.startsWith('/') ? url : `/${url}`;
+  // };
+
   const resolvePhotoUrl = (photoUrl?: string) => {
     if (!photoUrl) return undefined;
     const url = String(photoUrl).trim();
-
-    // Jika sudah absolute atau data/blob
     if (/^(https?:|data:|blob:)/i.test(url)) return url;
-
-    // Jika menunjuk ke public/profiles, pakai path relatif ke origin
     if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
-
-    // Fallback umum: relative path
     return url.startsWith('/') ? url : `/${url}`;
+  };
+
+  const flipExtCase = (url: string) => {
+    const u = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const m = u.pathname.match(/\.(jpg|jpeg)$/i);
+    if (!m) return url;
+    const ext = m[1];
+    const flipped = /[a-z]/.test(ext) ? ext.toUpperCase() : ext.toLowerCase();
+    u.pathname = u.pathname.replace(/\.(jpg|jpeg)$/i, `.${flipped}`);
+    return u.toString().replace(u.origin, ''); // kembalikan sebagai path relatif
   };
 
   useEffect(() => {
@@ -170,6 +188,12 @@ export default function AlumniList() {
                 src={resolvePhotoUrl(a.photoUrl)}
                 alt={`Foto ${a.name}`}
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if ((img as any)._triedFlip) return;       // cegah loop
+                  (img as any)._triedFlip = true;
+                  img.src = flipExtCase(img.src);
+                }}
               />
             )}
             {/** jika tidak ada photoUrl, munculkan placeholder */}
@@ -212,6 +236,12 @@ export default function AlumniList() {
                         src={resolvePhotoUrl(selected.photoUrl)}
                         alt={`Foto ${selected.name}`}
                         className="h-20 w-20 object-cover rounded-md border"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if ((img as any)._triedFlip) return;
+                          (img as any)._triedFlip = true;
+                          img.src = flipExtCase(img.src);
+                        }}
                       />
                       // <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={64} height={64} className="h-20 w-20 object-cover rounded-md border" />
                     ) : (
