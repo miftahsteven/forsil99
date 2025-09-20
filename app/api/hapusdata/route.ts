@@ -25,8 +25,8 @@ export async function POST(req: Request) {
             throw new Error(`Firebase error ${res.status} ${body}`);
         }
         return NextResponse.json({ ok: true });
-    } catch (e: any) {
-        console.error('hapusdata error:', e?.message || e);
-        return NextResponse.json({ error: 'Gagal menghapus data' }, { status: 500 });
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }
