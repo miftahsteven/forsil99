@@ -4,6 +4,7 @@ import { db } from '../firebase/client';
 import { ref, onValue, off, DataSnapshot } from 'firebase/database';
 import { mapSnapshot, Alumni } from '../lib/alumni';
 import Modal from './Modal';
+import Image from 'next/image';
 import QRCode from 'react-qr-code';
 
 interface AlumniWithPhoto extends Alumni {
@@ -156,11 +157,12 @@ export default function AlumniList() {
           <div key={a.id} className="border rounded p-3">
             {/** munculkan foto dari photoUrl di section ini. disebelah kiri list nama */}
             {a.photoUrl && (
-              <img
-                src={resolvePhotoUrl(a.photoUrl)}
-                alt={`Foto ${a.name}`}
-                className="h-16 w-16 object-cover rounded-full mr-4 float-left"
-              />
+              <Image src={resolvePhotoUrl(a.photoUrl)!} alt={`Foto ${a.name}`} width={64} height={64} className="h-16 w-16 object-cover rounded-full mr-4 float-left" />
+              // <img
+              //   src={resolvePhotoUrl(a.photoUrl)}
+              //   alt={`Foto ${a.name}`}
+              //   className="h-16 w-16 object-cover rounded-full mr-4 float-left"
+              // />
             )}
             {/** jika tidak ada photoUrl, munculkan placeholder */}
             {!a.photoUrl && (
@@ -198,11 +200,12 @@ export default function AlumniList() {
                   <div className="mr-4">
                     {selected.photoUrl ? (
                       //foto alumni tidak terlihat sepertinya butuh URL yang benar
-                      <img
-                        src={resolvePhotoUrl(selected.photoUrl)}
-                        alt={`Foto ${selected.name}`}
-                        className="h-20 w-20 object-cover rounded-md border"
-                      />
+                      // <img
+                      //   src={resolvePhotoUrl(selected.photoUrl)}
+                      //   alt={`Foto ${selected.name}`}
+                      //   className="h-20 w-20 object-cover rounded-md border"
+                      // />
+                      <Image src={resolvePhotoUrl(selected.photoUrl)!} alt={`Foto ${selected.name}`} width={16} height={16} className="h-20 w-20 object-cover rounded-md border" />
                     ) : (
                       <div className="h-20 w-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500">
                         No Photo
