@@ -17,15 +17,28 @@ export default function AlumniList() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
 
+  // const resolvePhotoUrl = (photoUrl?: string) => {
+  //   if (!photoUrl) return undefined;
+  //   // If already absolute or data/blob, use as-is
+  //   if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
+
+  //   // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
+  //   const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
+  //   const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
+  //   return base ? `${base}${path}` : path; // fallback to relative
+  // };
   const resolvePhotoUrl = (photoUrl?: string) => {
     if (!photoUrl) return undefined;
-    // If already absolute or data/blob, use as-is
-    if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
+    const url = String(photoUrl).trim();
 
-    // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
-    const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
-    const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
-    return base ? `${base}${path}` : path; // fallback to relative
+    // Jika sudah absolute atau data/blob
+    if (/^(https?:|data:|blob:)/i.test(url)) return url;
+
+    // Jika menunjuk ke public/profiles, pakai path relatif ke origin
+    if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
+
+    // Fallback umum: relative path
+    return url.startsWith('/') ? url : `/${url}`;
   };
 
   useEffect(() => {
