@@ -96,7 +96,8 @@ export default function AlumniList() {
     const unsubscribe = onValue(
       r,
       (snap: DataSnapshot) => {
-        setAlumni(mapSnapshot(snap));
+        {/** limit alumni cukup 50 paling teratas */ }
+        setAlumni(mapSnapshot(snap).slice(0, 50));
         setLoading(false);
       },
       () => setLoading(false)
@@ -235,6 +236,8 @@ export default function AlumniList() {
           </div>
         </button>
       ))}
+
+      {/** tampilkan total alumni */}
       <div className="mt-4 text-sm text-gray-600">Total Alumni: {alumni.length}</div>
       <div className="text-sm text-gray-600">{labeljumlah}</div>
 
@@ -314,10 +317,10 @@ export default function AlumniList() {
                         <div className="text-xs text-gray-500">Jurusan</div>
                         <div className="font-medium">{selected.program ?? '-'}</div>
                       </div>
-                      <div className="mt-2">
+                      {/* <div className="mt-2">
                         <div className="text-xs text-gray-500">Tahun Lulus</div>
                         <div className="font-medium">{selected.graduationYear ?? '-'}</div>
-                      </div>
+                      </div> */}
                     </div>
                     <div className="mt-2 grid">
                       <div>

@@ -38,7 +38,9 @@ const years = Array.from({ length: 3 }, (_, i) => 2000 - i);
 //buat array jurusan hanya, IPA, IPS dan Bahasa
 const jurusan = ['IPA', 'IPS', 'Bahasa'];
 //buat array pekerjaan/profesi yang akan dikonversi ke select option di form pekerjaan
-const profesi = ['PNS', 'Polisi/TNI', 'Karyawan Swasta', 'Wiraswasta', 'Profesional/Ahli', 'Tidak Bekerja', 'Lainnya',];
+//const profesi = ['PNS', 'Polisi/TNI', 'Karyawan Swasta', 'Wiraswasta', 'Profesional/Ahli', 'Tidak Bekerja', 'Lainnya',];
+
+//ambil data dari firebase, path /data/pekerjaan.json
 
 const getLoggedInUsername = (): string => {
   //ambil username dari proses createSessionResponse saat login
@@ -96,6 +98,34 @@ export default function AlumniForm({ onSuccess }: Props) {
   const [showModal, setShowModal] = useState(false);
 
   const [alumniNumber, setAlumniNumber] = useState<string | null>(null);
+  const [profesi, setProfesi] = useState<string[]>([]);
+
+  React.useEffect(() => {
+
+    //fetch data dari firebase, path /data/pekerjaan.json
+    const fetchProfesi = async () => {
+      try {
+        const res = await fetch('https://forsil99-default-rtdb.asia-southeast1.firebasedatabase.app/data/pekerjaan.json');
+        if (!res.ok) {
+          console.error("Gagal mengambil data pekerjaan:", res.statusText);
+          return;
+        }
+        const data: unknown = await res.json();
+        if (Array.isArray(data) && data.every(item => typeof item === 'string' || item === null)) {
+          setProfesi(data as string[]);
+        } else {
+          console.error("Data pekerjaan tidak valid");
+        }
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("Error fetching pekerjaan data:", message);
+      }
+    };
+
+    fetchProfesi();
+
+  }, []);
+  //fetch data alumni berdasarkan username yang login
 
   const didFetch = useRef(false);
   const r = useRouter();
@@ -310,9 +340,11 @@ export default function AlumniForm({ onSuccess }: Props) {
         <div>
           <label className='block text-sm font-medium'>Pekerjaan/Profesi</label>
           {/* <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" /> */}
+          {/** select box ambil data pekerjaan dari getProfesiList */}
           <select name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded">
             <option value="">-- Pilih Pekerjaan/Profesi --</option>
-            {profesi.map(p => <option key={p} value={p}>{p}</option>)}
+            {/** check index 0 is null */}
+            {profesi.map((p, i) => p ? <option key={i} value={p}>{p}</option> : null)}
           </select>
         </div>
         <div>
