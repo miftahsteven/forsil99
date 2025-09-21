@@ -37,6 +37,8 @@ function isAlumniData(v: unknown): v is AlumniData {
 const years = Array.from({ length: 3 }, (_, i) => 2000 - i);
 //buat array jurusan hanya, IPA, IPS dan Bahasa
 const jurusan = ['IPA', 'IPS', 'Bahasa'];
+//buat array pekerjaan/profesi yang akan dikonversi ke select option di form pekerjaan
+const profesi = ['PNS', 'Polisi/TNI', 'Karyawan Swasta', 'Wiraswasta', 'Profesional/Ahli', 'Tidak Bekerja', 'Lainnya',];
 
 const getLoggedInUsername = (): string => {
   //ambil username dari proses createSessionResponse saat login
@@ -296,12 +298,18 @@ export default function AlumniForm({ onSuccess }: Props) {
         <div>
           <label className='block text-sm font-medium'>Tanggal Lahir</label>
           {/** input mengeluarkan calendar, dan melihat data tahun 1990 kebawah */}
-          <input type="date" name="tanggalLahir" value={form.tanggalLahir} onChange={handleChange} className="border w-full p-2 rounded" />
+          {/* <input type="date" name="tanggalLahir" value={form.tanggalLahir} onChange={handleChange} className="border w-full p-2 rounded" /> */}
+          {/** input date dibatasi tahunnya dari 1975 - 1985 */}
+          <input type="date" name="tanggalLahir" value={form.tanggalLahir} onChange={handleChange} className="border w-full p-2 rounded" min="1975-01-01" max="1985-12-31" />
         </div>
         {/** tambah pekerjaan */}
         <div>
-          <label className='block text-sm font-medium'>Pekerjaan</label>
-          <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" />
+          <label className='block text-sm font-medium'>Pekerjaan/Profesi</label>
+          {/* <input name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded" /> */}
+          <select name="pekerjaan" value={form.pekerjaan} onChange={handleChange} className="border w-full p-2 rounded">
+            <option value="">-- Pilih Pekerjaan/Profesi --</option>
+            {profesi.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
         </div>
         <div>
           <label className='block text-sm font-medium'>Alamat Rumah (Surat Menyurat)</label>
