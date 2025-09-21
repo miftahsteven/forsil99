@@ -321,10 +321,11 @@ export default function AlumniList() {
                     <div className="mt-2 grid grid-cols-2">
                       <div>
                         <div className="text-xs text-gray-500">Pekerjaan</div>
-                        <div className="font-medium">{
-                          // batasi pekerjaan maksimal 30 karakter
-                          selected.pekerjaan ? (selected.pekerjaan.length > 30 ? selected.pekerjaan.slice(0, 30) + '...' : selected.pekerjaan) : '-'
+                        {/** data pekerjaan dibuat break 2 baris, apabila kepanjangan, maka ke kolom berikutnya */}
+                        <div className="font-medium" style={{ wordBreak: 'break-word' }}>{selected.pekerjaan ? (selected.pekerjaan.length > 30 ? selected.pekerjaan.slice(0, 30) + '...' : selected.pekerjaan) : '-'
+
                         }</div>
+
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Tanggal Lahir</div>
