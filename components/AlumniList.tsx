@@ -321,12 +321,15 @@ export default function AlumniList() {
                       level="L"
                       className="mt-2"
                     />
+                    <div className="flex-grow">
+                      <Image src={`${selected.program === 'IPS' ? '/ips.png' : selected.program === 'Bahasa' ? '/bahasa.png' : '/ipa.png'}`} alt="Logo Jurusan" width={60} height={30} className="mt-2" />
+                    </div>
                   </div>
                   <div className="text-sm flex-1">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-xs text-gray-500">NIA</div>
-                        <div className="font-bold">{selected.nomorAlumni ?? '-'} ({selected.program ?? '-'})</div>
+                        <div className="font-bold">{selected.nomorAlumni ?? '-'}</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Nama</div>
@@ -391,7 +394,18 @@ export default function AlumniList() {
                                 return ` ${age} tahun`;
                               })()
                               : '-'
+
                           }
+                          &nbsp;
+                          ({
+                            selected.tanggalLahir
+                              ? new Date(selected.tanggalLahir).toLocaleDateString('id-ID', {
+                                //day: '2-digit',
+                                //month: 'short',
+                                year: 'numeric'
+                              })
+                              : '-'
+                          })
                         </div>
                       </div>
                     </div>
