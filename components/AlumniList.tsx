@@ -216,7 +216,7 @@ export default function AlumniList() {
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
                 onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                   if (!tryNextCandidate(e.currentTarget)) {
-                    e.currentTarget.src = '/profiles/placeholder.jpeg';
+                    e.currentTarget.src = '/profiles/placeholder.jpg';
                   }
                 }}
               />
@@ -266,7 +266,7 @@ export default function AlumniList() {
                         className="h-20 w-20 object-cover rounded-md border"
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                           if (!tryNextCandidate(e.currentTarget)) {
-                            e.currentTarget.src = '/profiles/placeholder.jpeg';
+                            e.currentTarget.src = '/profiles/placeholder.jpg';
                             e.currentTarget.className = "h-16 w-16 object-cover rounded-md border bg-gray-200 flex items-center justify-center text-gray-500";
                           }
                         }}
