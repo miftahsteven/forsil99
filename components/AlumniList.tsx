@@ -6,6 +6,7 @@ import { mapSnapshot, Alumni } from '../lib/alumni';
 import Modal from './Modal';
 import Image from 'next/image';
 import QRCode from 'react-qr-code';
+import QRWithLogo from './QRWithLogo';
 
 interface AlumniWithPhoto extends Alumni {
   photoUrl?: string; // tambahkan properti photoUrl
@@ -313,20 +314,18 @@ export default function AlumniList() {
                         No Photo
                       </div>
                     )}
-                    <QRCode
+                    <QRWithLogo
                       value={String(selected.nomorAlumni)}
-                      size={70}
-                      bgColor="#FFFFFF"
-                      fgColor="#000000"
-                      level="L"
+                      size={80}
+                      logoSrc={selected.program === 'IPS' ? '/ips.png' : selected.program === 'Bahasa' ? '/bahasa.png' : '/ipa.png'}
                       className="mt-2"
                     />
-                    <div className="flex-grow">
+                    {/* <div className="flex-grow">
                       <Image src={`${selected.program === 'IPS' ? '/ips.png' : selected.program === 'Bahasa' ? '/bahasa.png' : '/ipa.png'}`} alt="Logo Jurusan" width={60} height={30} className="mt-2" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="text-sm flex-1">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2 lg:grid-cols-2">
                       <div>
                         <div className="text-xs text-gray-500">NIA</div>
                         <div className="font-bold">{selected.nomorAlumni ?? '-'}</div>
@@ -336,15 +335,23 @@ export default function AlumniList() {
                         <div className="font-medium">{selected.name ?? '-'}</div>
                       </div>
                     </div>
-                    <div className="mt-2 gridgap-2">
+                    <div className="mt-2 grid gap-2 lg:grid-cols-2">
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">No. Telp/Whatsapp</div>
-                        <div className="font-medium">{selected.nohp ?? '-'}</div>
+                        <div className="font-medium">
+                          {
+                            //selected.nohp ?? '-'
+                            //masking nohp, hanya menampilkan 4 digit terakhir
+                            selected.nohp
+                              ? (selected.nohp.length > 4 ? '*******' + selected.nohp.slice(-4) : selected.nohp)
+                              : '-'
+                          }
+                        </div>
                       </div>
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">Email</div>
                         <div className="font-medium">
-                          {selected.email ? (selected.email.length > 25 ? selected.email.slice(0, 25) + '...' : selected.email) : '-'}
+                          {selected.email ? (selected.email.length > 20 ? selected.email.slice(0, 20) + '...' : selected.email) : '-'}
                         </div>
                       </div>
                     </div>
@@ -358,7 +365,7 @@ export default function AlumniList() {
                         <div className="font-medium">{selected.graduationYear ?? '-'}</div>
                       </div>
                     </div> */}
-                    <div className="mt-2 grid gap-2">
+                    <div className="mt-2 grid gap-2 lg:grid-cols-2">
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">Pekerjaan</div>
                         <div className="font-small text-black-300" style={{ wordBreak: 'break-word' }}>
