@@ -60,7 +60,7 @@ export default function AlumniList() {
 
   // Buat daftar kandidat URL dengan variasi ekstensi dan case
   const buildImageCandidates = (src: string) => {
-    const u = new URL(src, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const u = new URL(src, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     const q = u.search; const h = u.hash;
     const m = u.pathname.match(/^(.+)\.([^.]+)$/);
     const base = m ? m[1] : u.pathname;
@@ -216,7 +216,7 @@ export default function AlumniList() {
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
                 onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                   if (!tryNextCandidate(e.currentTarget)) {
-                    e.currentTarget.src = '/profiles/placeholder.png';
+                    e.currentTarget.src = '/profiles/placeholder.jpeg';
                   }
                 }}
               />
@@ -266,7 +266,8 @@ export default function AlumniList() {
                         className="h-20 w-20 object-cover rounded-md border"
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                           if (!tryNextCandidate(e.currentTarget)) {
-                            e.currentTarget.src = '/profiles/placeholder.png';
+                            e.currentTarget.src = '/profiles/placeholder.jpeg';
+                            e.currentTarget.className = "h-16 w-16 object-cover rounded-md border bg-gray-200 flex items-center justify-center text-gray-500";
                           }
                         }}
                       />
@@ -329,15 +330,31 @@ export default function AlumniList() {
 
                       </div>
                       <div className="mt-2">
-                        <div className="text-xs text-gray-500">Tanggal Lahir</div>
+                        <div className="text-xs text-gray-500">Umur</div>
                         <div className="font-small text-black-100">
                           {
+                            // selected.tanggalLahir
+                            //   ? new Date(selected.tanggalLahir).toLocaleDateString('id-ID', {
+                            //     //day: '2-digit',
+                            //     month: 'short',
+                            //     year: 'numeric'
+                            //   })
+                            //   : '-'
+                          }
+
+                          {
+                            //convert tanggal ke umur
                             selected.tanggalLahir
-                              ? new Date(selected.tanggalLahir).toLocaleDateString('id-ID', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })
+                              ? (() => {
+                                const birthDate = new Date(selected.tanggalLahir!);
+                                const today = new Date();
+                                let age = today.getFullYear() - birthDate.getFullYear();
+                                const m = today.getMonth() - birthDate.getMonth();
+                                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                                  age--;
+                                }
+                                return ` ${age} tahun`;
+                              })()
                               : '-'
                           }
                         </div>
@@ -346,7 +363,7 @@ export default function AlumniList() {
                     <div className="mt-2">
                       <div>
                         <div className="text-xs text-gray-500">Alamat Rumah</div>
-                        <div className="font-medium">{
+                        <div className="font-small text-black-100">{
                           // batasi alamat maksimal 30 karakter
                           selected.alamat ? (selected.alamat.length > 100 ? selected.alamat.slice(0, 100) + '...' : selected.alamat) : '-'
                         }</div>
