@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         }
 
         const token = process.env.WABLAS_TOKEN;
-        const secretKey = process.env.WABLAS_SECRET_KEY;
+        const secretKey = process.env.WABLAS_SECRET;
         const wablasUrl = process.env.WABLAS_URL || "https://sby.wablas.com/api/";
 
         if (!token || !secretKey) {
