@@ -239,7 +239,7 @@ export default function AlumniForm({ onSuccess }: Props) {
           },
           body: JSON.stringify({
             phone: userPhone,
-            message: `Halo ${form.name}, data alumni Anda telah berhasil disimpan di SILUNI. Terima kasih telah mendaftar sebagai alumni. Selalu lakukan update data Anda jika ada perubahan.`,
+            message: `Halo ${form.name}, data alumni Anda telah berhasil disimpan di SILUNI. Terima kasih telah mengupdate data anda sebagai alumni. Selalu lakukan update data Anda jika ada perubahan.`,
           }),
         });
 
