@@ -3,6 +3,18 @@ import { getDatabase, ref, remove, get } from 'firebase/database';
 import { getAuth, deleteUser } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 
+const app = initializeApp({
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    databaseURL: process.env.FIREBASE_DB_URL,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_APP_ID,
+});
+const db = getDatabase(app);
+const auth = getAuth(app);
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,20 +22,37 @@ export const revalidate = 0;
 
 export async function POST(req: Request) {
     try {
-        const { key } = await req.json();
-        if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 });
 
-        const base = (process.env.FIREBASE_DB_URL || '').replace(/\/+$/, '');
-        if (!base) throw new Error('FIREBASE_DB_URL not set');
-        const secret = process.env.FIREBASE_DATABASE_SECRET || '';
-        const authQ = secret ? `?auth=${encodeURIComponent(secret)}` : '';
-
-        const url = `${base}/alumni/${encodeURIComponent(key)}.json${authQ}`;
-        const res = await fetch(url, { method: 'DELETE', cache: 'no-store' });
-        if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            throw new Error(`Firebase error ${res.status} ${body}`);
+        const { username } = await req.json();
+        if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
+        // hapus di auth
+        await remove(ref(db, `auth/${username}`));
+        // cari di alumni
+        const alumniSnap = await get(ref(db, 'alumni'));
+        if (alumniSnap.exists()) {
+            const alumniData = alumniSnap.val();
+            const entry = Object.entries(alumniData).find(([key, value]) => {
+                return (value as { username?: string }).username === username;
+            });
+            if (entry) {
+                const [key] = entry;
+                await remove(ref(db, `alumni/${key}`));
+                // hapus user di firebase auth
+                try {
+                    const userRecord = await get(ref(db, `auth/${username}`));
+                    if (userRecord.exists()) {
+                        const uid = userRecord.val().uid;
+                        if (uid) {
+                            await deleteUser(uid); // pastikan currentUser sudah di-set dengan benar
+                        }
+                    }
+                } catch {
+                    // ignore error if user not found or cannot delete  
+                }
+            }
         }
+
+
         return NextResponse.json({ ok: true });
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
