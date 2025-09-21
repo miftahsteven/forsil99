@@ -264,7 +264,15 @@ export default function AlumniList() {
             <div className="font-semibold">{a.name}</div>
             <div className="text-sm text-gray-600">{a.nomorAlumni}</div>
             <div className="text-xs text-gray-500">
-              {a.program || '-'} | No. HP: {a.nohp || '-'}
+              {a.program || '-'} | No. HP :
+              {
+                //a.nohp || '-'
+                //masking nohp, hanya menampilkan 4 digit terakhir
+                a.nohp
+                  ? (a.nohp.length > 4 ? '*******' + a.nohp.slice(-4) : a.nohp)
+                  : '-'
+
+              }
             </div>
           </div>
         </button>
