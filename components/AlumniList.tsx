@@ -11,12 +11,15 @@ interface AlumniWithPhoto extends Alumni {
   photoUrl?: string; // tambahkan properti photoUrl
 }
 
+const jurusanOptions = ["IPA", "IPS", "BAHASA"]
+
 export default function AlumniList() {
   const [alumni, setAlumni] = useState<AlumniWithPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [labeljumlah, setLabeljumlah] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
+  const [keyword, setKeyword] = useState('');
 
   interface AlumniWithPhoto extends Alumni {
     photoUrl?: string;
@@ -99,34 +102,73 @@ export default function AlumniList() {
   return (
     <div className="space-y-3">
       {/** buatkan input search dan mengambil data dari nama alumni. metode pencarian melihat nama dari keyword yang diketikan*/}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Cari alumni berdasarkan nama..."
-          className="w-full p-2 border rounded"
-          onChange={e => {
-            const keyword = e.target.value.toLowerCase();
+      {/** buatkan input search dan select jurusan bersebelahan rownya. */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="text-sm text-gray-600 mb-2">
+          <select className="p-2 border rounded w-full" onChange={e => {
+            const jurusan = e.target.value;
             setLoading(true);
             const r = ref(db, 'alumni');
             onValue(
               r,
               (snap: DataSnapshot) => {
-                const allAlumni = mapSnapshot(snap);
-                const filtered = allAlumni.filter(a =>
-                  a.name.toLowerCase().includes(keyword)
-                );
+                //const allAlumni = mapSnapshot(snap);
+                //jika keyword ada, maka filter tetap ditambah berdasarkan keyword.
+                const allAlumni = mapSnapshot(snap).filter(a => a.name.toLowerCase().includes(keyword.toLowerCase()));
+                const filtered = jurusan === '' ? allAlumni : allAlumni.filter(a => (a.program || '').toUpperCase() === jurusan);
                 setAlumni(filtered);
                 setLabeljumlah(
                   filtered.length
-                    ? `Ditemukan ${filtered.length} alumni dengan nama mengandung "${keyword}"`
-                    : `Tidak ada alumni dengan nama mengandung "${keyword}"`
+                    ? `Ditemukan ${filtered.length} alumni dengan jurusan "${jurusan || 'Semua'}"`
+                    : `Tidak ada alumni dengan jurusan "${jurusan}"`
                 );
                 setLoading(false);
               },
               () => setLoading(false)
             );
-          }}
-        />
+          }}>
+            <option value="">Semua Jurusan</option>
+            {jurusanOptions.map(j => (
+              <option key={j} value={j}>{j}</option>
+            ))}
+          </select>
+        </div>
+        {/** tambahkan select box pilihan jurusan disini */}
+        <div className="text-sm text-gray-600 ">
+          <input
+            type="text"
+            placeholder="Cari alumni berdasarkan nama..."
+            className="w-full p-2 border rounded"
+            onChange={e => {
+              const keyword = e.target.value.toLowerCase();
+              setKeyword(keyword);
+              setLoading(true);
+              const r = ref(db, 'alumni');
+              onValue(
+                r,
+                (snap: DataSnapshot) => {
+                  //const allAlumni = mapSnapshot(snap);
+                  //jika jurusan ada, maka filter tetap ditambah berdasarkan jurusan.
+                  const allAlumni = mapSnapshot(snap).filter(a => {
+                    const currentJurusan = (a.program || '').toUpperCase();
+                    return (currentJurusan === (document.querySelector('select')?.value || '').toUpperCase() || document.querySelector('select')?.value === '');
+                  });
+                  const filtered = allAlumni.filter(a =>
+                    a.name.toLowerCase().includes(keyword)
+                  );
+                  setAlumni(filtered);
+                  setLabeljumlah(
+                    filtered.length
+                      ? `Ditemukan ${filtered.length} alumni dengan nama mengandung "${keyword}"`
+                      : `Tidak ada alumni dengan nama mengandung "${keyword}"`
+                  );
+                  setLoading(false);
+                },
+                () => setLoading(false)
+              );
+            }}
+          />
+        </div>
       </div>
 
       {loading && <p>Memuat data...</p>}
@@ -134,6 +176,25 @@ export default function AlumniList() {
       {/** contoh: A, B, C, D, dst. jika diklik, maka filter alumni yang namanya diawali huruf tersebut */}
       {/** jika tidak ada alumni yang namanya diawali huruf tersebut, maka tampilkan pesan "Tidak ada alumni dengan nama awal {huruf}" */}
       <div className="flex space-x-2 overflow-x-auto mb-4">
+        <button
+          className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 flex-shrink-0"
+          onClick={() => {
+            // reset ke semua alumni
+            setLoading(true);
+            const r = ref(db, 'alumni');
+            onValue(
+              r,
+              (snap: DataSnapshot) => {
+                setAlumni(mapSnapshot(snap));
+                setLoading(false);
+                setLabeljumlah('');
+              },
+              () => setLoading(false)
+            );
+          }}
+        >
+          Semua
+        </button>
         {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
           <button
             key={letter}
@@ -163,25 +224,6 @@ export default function AlumniList() {
             {letter}
           </button>
         ))}
-        <button
-          className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 flex-shrink-0"
-          onClick={() => {
-            // reset ke semua alumni
-            setLoading(true);
-            const r = ref(db, 'alumni');
-            onValue(
-              r,
-              (snap: DataSnapshot) => {
-                setAlumni(mapSnapshot(snap));
-                setLoading(false);
-                setLabeljumlah('');
-              },
-              () => setLoading(false)
-            );
-          }}
-        >
-          Semua
-        </button>
       </div>
 
       {/** tampilkan list alumni dalam bentuk grid 2 kolom pada layar kecil, 3 kolom pada layar sedang, dan 4 kolom pada layar besar */}
@@ -281,17 +323,17 @@ export default function AlumniList() {
                     />
                   </div>
                   <div className="text-sm flex-1">
-                    <div className="grid">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-xs text-gray-500">NIA</div>
-                        <div className="font-bold">{selected.nomorAlumni ?? '-'}</div>
+                        <div className="font-bold">{selected.nomorAlumni ?? '-'} ({selected.program ?? '-'})</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">Nama</div>
                         <div className="font-medium">{selected.name ?? '-'}</div>
                       </div>
                     </div>
-                    {/* <div className="mt-2 grid">
+                    <div className="mt-2 gridgap-2">
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">No. Telp/Whatsapp</div>
                         <div className="font-medium">{selected.nohp ?? '-'}</div>
@@ -302,26 +344,25 @@ export default function AlumniList() {
                           {selected.email ? (selected.email.length > 25 ? selected.email.slice(0, 25) + '...' : selected.email) : '-'}
                         </div>
                       </div>
-                    </div> */}
-                    <div className="mt-2 grid">
+                    </div>
+                    {/* <div className="mt-2 grid grid-cols-2 gap-2">
                       <div>
                         <div className="text-xs text-gray-500">Jurusan</div>
                         <div className="font-medium">{selected.program ?? '-'}</div>
                       </div>
-                      {/* <div className="mt-2">
+                      <div className="mt-2">
                         <div className="text-xs text-gray-500">Tahun Lulus</div>
                         <div className="font-medium">{selected.graduationYear ?? '-'}</div>
-                      </div> */}
-                    </div>
-                    <div className="mt-2 grid">
-                      <div>
+                      </div>
+                    </div> */}
+                    <div className="mt-2 grid gap-2">
+                      <div className="mt-2">
                         <div className="text-xs text-gray-500">Pekerjaan</div>
-                        {/** data pekerjaan dibuat break 2 baris, apabila kepanjangan, maka ke kolom berikutnya */}
-                        <div className="font-small text-black-300" style={{ wordBreak: 'break-word' }}>{
-                          selected.pekerjaan ? (selected.pekerjaan.length > 30 ? selected.pekerjaan.slice(0, 30) + '...' : selected.pekerjaan) : '-'
-
-                        }</div>
-
+                        <div className="font-small text-black-300" style={{ wordBreak: 'break-word' }}>
+                          {
+                            selected.pekerjaan ? (selected.pekerjaan.length > 30 ? selected.pekerjaan.slice(0, 30) + '...' : selected.pekerjaan) : '-'
+                          }
+                        </div>
                       </div>
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">Umur</div>
