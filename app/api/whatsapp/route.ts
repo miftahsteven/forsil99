@@ -12,6 +12,15 @@ type SendPayload = {
     message: string;
 };
 
+function normalizePhone(raw: string): string {
+    const d = String(raw || '').replace(/\D+/g, '');
+    if (!d) return '';
+    if (d.startsWith('62')) return d;
+    if (d.startsWith('0')) return '62' + d.slice(1);
+    if (d.startsWith('8')) return '62' + d;
+    return d;
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = (await req.json()) as Partial<SendPayload>;
@@ -34,18 +43,22 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const form = new URLSearchParams();
-        form.set("phone", String(body.phone));
-        form.set("message", String(body.message));
+        const messageClean = String(body.message || '').replace(/\r\n/g, '\n').trim();
+
+        const bodyMessage = new URLSearchParams({
+            phone: normalizePhone(body.phone),
+            message: messageClean,
+        }).toString();
+
 
         const wablasRes = await fetch(`${wablasUrl}send-message`, {
             method: "POST",
             headers: {
-                Authorization: `${token}.${secretKey}`,
-                "Content-Type": "application/x-www-form-urlencoded",
-                Accept: "application/json",
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+                Authorization: secretKey ? `${token}.${secretKey}` : token,
             },
-            body: form.toString(),
+            body: bodyMessage,
         });
 
         const text = await wablasRes.text();
