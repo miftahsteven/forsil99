@@ -231,14 +231,18 @@ export default function AlumniForm({ onSuccess }: Props) {
 
 
       try {
-        await fetch('/api/send-whatsapp', {
+        const userPhone = form.nohp.startsWith('0') ? '62' + form.nohp.slice(1) : form.nohp;
+        await fetch('/api/whatsapp', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            to: nomorhandphone,
-            message: `Halo ${form.name}, data alumni Anda telah berhasil diperbarui. Terima kasih telah memperbarui informasi Anda di sistem kami.`
-          })
+            phone: userPhone,
+            message: `Halo ${form.name}, data alumni Anda telah berhasil disimpan di SILUNI. Terima kasih telah mendaftar sebagai alumni. Selalu lakukan update data Anda jika ada perubahan.`,
+          }),
         });
+
       } catch (e) {
         console.error("Gagal mengirim WhatsApp:", e);
       }
