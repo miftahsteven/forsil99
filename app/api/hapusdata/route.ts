@@ -29,26 +29,12 @@ export async function POST(req: Request) {
         await remove(ref(db, `auth/${username}`));
         // cari di alumni
         const alumniSnap = await get(ref(db, 'alumni'));
+        //untuk path alumni, username = nohp, tapi di cari berdasarkan nohp=username
         if (alumniSnap.exists()) {
             const alumniData = alumniSnap.val();
-            const entry = Object.entries(alumniData).find(([key, value]) => {
-                return (value as { username?: string }).username === username;
-            });
-            if (entry) {
-                const [key] = entry;
-                await remove(ref(db, `alumni/${key}`));
-                // hapus user di firebase auth
-                try {
-                    const userRecord = await get(ref(db, `auth/${username}`));
-                    if (userRecord.exists()) {
-                        const uid = userRecord.val().uid;
-                        if (uid) {
-                            await deleteUser(auth.currentUser!); // pastikan auth.currentUser ada
-                        }
-                    }
-                } catch {
-                    // ignore error if user not found or cannot delete  
-                }
+            const alumniKey = Object.keys(alumniData).find(key => alumniData[key].nohp === username);
+            if (alumniKey) {
+                await remove(ref(db, `alumni/${alumniKey}`));
             }
         }
 
