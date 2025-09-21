@@ -18,35 +18,16 @@ export default function AlumniList() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<AlumniWithPhoto | null>(null);
 
-  // const resolvePhotoUrl = (photoUrl?: string) => {
-  //   if (!photoUrl) return undefined;
-  //   // If already absolute or data/blob, use as-is
-  //   if (/^(https?:|data:|blob:)/i.test(photoUrl)) return photoUrl;
+  interface AlumniWithPhoto extends Alumni {
+    photoUrl?: string;
+    photoUpdatedAt?: number | string; // isi dari server saat upload foto
+  }
 
-  //   // Otherwise join with NEXT_PUBLIC_BASE_URL when provided
-  //   const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
-  //   const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
-  //   return base ? `${base}${path}` : path; // fallback to relative
-  // };
   // const resolvePhotoUrl = (photoUrl?: string) => {
   //   if (!photoUrl) return undefined;
   //   const url = String(photoUrl).trim();
   //   if (/^(https?:|data:|blob:)/i.test(url)) return url;
-  //   // pakai path relatif ke folder public
   //   if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
-  //   return url.startsWith('/') ? url : `/${url}`;
-  // };
-  // const resolvePhotoUrl = (photoUrl?: string) => {
-  //   if (!photoUrl) return undefined;
-  //   const url = String(photoUrl).trim();
-
-  //   // Jika sudah absolute atau data/blob
-  //   if (/^(https?:|data:|blob:)/i.test(url)) return url;
-
-  //   // Jika menunjuk ke public/profiles, pakai path relatif ke origin
-  //   if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
-
-  //   // Fallback umum: relative path
   //   return url.startsWith('/') ? url : `/${url}`;
   // };
 
@@ -56,6 +37,13 @@ export default function AlumniList() {
     if (/^(https?:|data:|blob:)/i.test(url)) return url;
     if (/^\/?profiles\//i.test(url)) return `/${url.replace(/^\/+/, '')}`;
     return url.startsWith('/') ? url : `/${url}`;
+  };
+
+  const withVersion = (url: string, v?: string | number): string => {
+    // pastikan selalu return string agar cocok dengan <Image src=...>
+    if (!url) return '';
+    const sep = url.includes('?') ? '&' : '?';
+    return v ? `${url}${sep}v=${encodeURIComponent(String(v))}` : url;
   };
 
   // Buat daftar kandidat URL dengan variasi ekstensi dan case
@@ -209,15 +197,17 @@ export default function AlumniList() {
             {a.photoUrl && (
               // <Image src={resolvePhotoUrl(a.photoUrl)!} alt={`Foto ${a.name}`} width={64} height={64} className="h-16 w-16 object-cover rounded-full mr-4 float-left" />
               <Image
-                src={resolvePhotoUrl(a.photoUrl)!}
+                src={withVersion(resolvePhotoUrl(a.photoUrl)!, a.photoUpdatedAt)}
                 alt={`Foto ${a.name}`}
                 width={64}
                 height={64}
                 unoptimized
                 className="h-16 w-16 object-cover rounded-full mr-4 float-left"
                 onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  if (!tryNextCandidate(e.currentTarget)) {
-                    e.currentTarget.src = '/profiles/placeholder.jpg';
+                  const img = e.currentTarget;
+                  img.removeAttribute('srcset');
+                  if (!tryNextCandidate(img)) {
+                    img.src = '/profiles/placeholder.jpg';
                   }
                 }}
               />
@@ -261,16 +251,17 @@ export default function AlumniList() {
                     {selected.photoUrl ? (
                       //foto alumni tidak terlihat sepertinya butuh URL yang benar
                       <Image
-                        src={resolvePhotoUrl(selected.photoUrl)!}
+                        src={withVersion(resolvePhotoUrl(selected.photoUrl)!, selected.photoUpdatedAt)}
                         alt={`Foto ${selected.name}`}
                         width={80}
                         height={80}
                         unoptimized
                         className="h-20 w-20 object-cover rounded-md border"
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          if (!tryNextCandidate(e.currentTarget)) {
-                            e.currentTarget.src = '/profiles/placeholder.jpg';
-                            e.currentTarget.className = "h-16 w-16 object-cover rounded-md border bg-gray-200 flex items-center justify-center text-gray-500";
+                          const img = e.currentTarget;
+                          img.removeAttribute('srcset');
+                          if (!tryNextCandidate(img)) {
+                            img.src = '/profiles/placeholder.jpg';
                           }
                         }}
                       />
@@ -300,7 +291,7 @@ export default function AlumniList() {
                         <div className="font-medium">{selected.name ?? '-'}</div>
                       </div>
                     </div>
-                    <div className="mt-2 grid">
+                    {/* <div className="mt-2 grid">
                       <div className="mt-2">
                         <div className="text-xs text-gray-500">No. Telp/Whatsapp</div>
                         <div className="font-medium">{selected.nohp ?? '-'}</div>
@@ -311,7 +302,7 @@ export default function AlumniList() {
                           {selected.email ? (selected.email.length > 25 ? selected.email.slice(0, 25) + '...' : selected.email) : '-'}
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                     <div className="mt-2 grid">
                       <div>
                         <div className="text-xs text-gray-500">Jurusan</div>
@@ -363,7 +354,7 @@ export default function AlumniList() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2">
+                    {/* <div className="mt-2">
                       <div>
                         <div className="text-xs text-gray-500">Alamat Rumah</div>
                         <div className="font-small text-black-100">{
@@ -371,7 +362,7 @@ export default function AlumniList() {
                           selected.alamat ? (selected.alamat.length > 100 ? selected.alamat.slice(0, 100) + '...' : selected.alamat) : '-'
                         }</div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
